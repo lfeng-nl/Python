@@ -9,6 +9,8 @@
 - tuple
 - dict
 - set
+- 序列：主要功能是`in`和`not in`表达式和索引操作；
+- ​
 
 ##2.函数
 ### 1.内置函数
@@ -41,6 +43,7 @@
 
 ## 3.高级特定
 - 切片:
+  - 切片操作会在开始处返回`start`，并在`end`前结束工作，也就是说，序列切片将包括起始位置；
 - 迭代:
   - 能用`for`循环的对象都为可迭代的（`iterable`）；
   - ​
@@ -77,16 +80,20 @@
 ## 5.模块
 
 -   模块：一个.py 文件就可以称为一个模块；
--   包：含有一些模块文件和一个`__init__.py`的文件；
+-   包：含有一些模块文件和一个`__init__.py`（用于表明这个文件夹是特别的）的文件夹，；
 -   包可以嵌套；
 -   模块分为直接运行和导入两种情况，当模块直接运行时会把一个特殊变量`__name__`置位`__main__`;
 -   作用域：模块中的有些希望仅仅在模块中使用的变量和函数，可以通过前缀`_`实现；
     -   一般`__xxx__`类型名称的变量，是特殊变量，可以被直接引用；例如`__name__, __author__`
     -   类似`_xxx`类型名称的变量，都是非公开的，不应该被直接引用。（但是可见的，引用不引用需要使用者自觉遵守）
 
-## 6.面向对象
+## 6.面向对象OOP
+
+>   OOP：Object Oriented Programming
 
 ### 1.基本语法
+
+-   类和实例：类是创建实例的模板，而实例是一个一个具体的对象；
 
 - ```python
   class Student(objext):
@@ -94,9 +101,12 @@
   ```
 
   - 通过`class`关键字定义类；
-  - 通过`( )` ：表明该类从哪继承；
+  - 通过`( )` ：表明继承关系；
+  - 后面跟类的定义；
 
 - `__init__()`：类似C++中的构造函数；第一个参数必须是`self`；
+
+- 在类中定义的函数，第一个参数永远都是`self`；
 
 - 访问控制：如果要让内部属性不被外部访问，可以把属性的名称前加上两个下划线`__`，python解释器会将其名称转换为`_类名__属性名`达到隐藏的目的；
 
@@ -110,7 +120,7 @@
 
 - 实例属性和类属性：
 
-  - 实例属性：给实例对象绑定属性的方法是通过实例变量，或者通过`self`变量；
+  - 实例(对象)属性：给实例对象绑定属性的方法是通过实例变量，或者通过`self`变量；
 
   - 类属性：直接在`class`中定义属性，这种属性归类所有；
 
@@ -140,8 +150,144 @@
 -   类中的特殊属性
 
     -   `__str__`
+
     -   `__iter__` ：如果一个类想被用于`for...in `循环，就必须实现一个`__iter__()`方法；该方法返回一个迭代对象，然后，Python的`for`循环就会不断调用该迭代对象的`__next__()` 方法拿到循环的下一个值；
+
+        ```python
+        class T(object):
+          def __init__(self, begin, end):
+            self.__begin = begin
+            self.__end = end
+          def __iter__(self):
+            return self
+          def __next__(self):
+            if self.__a > self.b:
+              raise StopIteration()
+            self.__a = self.__a + 1
+            return self.__a
+          
+          # 测试
+          a = T(10, 20)
+          for i in a:
+            print(i)		# 打印10-->20之间的整数
+        ```
+
     -   `__getitem__` ：实现该函数后，就能通过下标获取相应元素的值；
+
     -   `__getattr__` ：
-    -   `__call__` ：
+
+    -   `__call__` ：实例本身可以做为一个方法，直接对实例进行调用；
+
     -   `__str__` ：
+- 枚举类：通过`Enum`类定义的类型；
+
+  ```python
+  from enum import Enum
+
+  Month = Enum('Month', ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'))
+  # 还可以精确的控制枚举类型
+  from enum import Enum, unique
+
+  @unique
+  class Weekday(Enum):
+      Sun = 0 # Sun的value被设定为0
+      Mon = 1
+      Tue = 2
+      Wed = 3
+      Thu = 4
+      Fri = 5
+      Sat = 6
+  ```
+
+  - `@unique` 装饰器可以帮助我们检查保证没有重复值；
+
+- `type()` ：1.查看一个类型或变量类型，2.创建一个新类型；
+
+  ```python
+  # 要创建一个class类，type()函数以此传入3个参数：
+  # 1.calss的名称
+  # 2.继承的父类集合，（元组）
+  # 3.calss的方法名称与函数绑定
+
+  def fd(self, name="world"):
+      print('Hello, %s.'%name)
+      
+  Hello = type("Hello", (object,), dict(hello=fn))
+  ```
+
+- `metaclass`元类：一般都是先定义类，然后创建实例。`metaclass`允许创建类或者修改类，
+
+## 7.错误、调试和测试
+
+> 在函数出错时，c往往会通过返回值表示是否发生错误，这导致正确结果和错误代码混和，一旦出错，还要一级一级上报；所以一般高级语言通常都内置了一套`try...except...finally...`的错误处理机制；
+
+- `try`来运行代码，如果发生错误，则后续代码不会继续执行，直接跳转到错误处理，即`except`语句块；
+- `except`：如果没有发生错误，则此段不会执行；发生错误，会被此段捕获；
+- `finally` ：如果有此段，则最后一定会执行（发生不发生异常都会执行）；
+- 错误种类：错误也是`class`，所有错误类型都继承自`BaseException`，捕获时不但可以捕获指定类型，还能将子类型同时捕获；
+- `logging`：模块记录错误信息；
+- `raise`：抛出一个错误实例；
+
+### 1.调试
+
+-   `assert 表达式` ：断言，如果表达式为真，继续执行；否则抛出`AssertionError`； python可以在运行时加入大O，`python3 -O xxxx` 关闭`assert`
+-   `logging`：同`assert`相比，`logging`不会抛出异常，而且可以输出到文件；
+    -   有`debug,info,warning,error`由低到高几个等级；`logging.debug()， logging.info() ...`
+    -   可以通过`logging.basicConfig(level=logging.INFO)`设置等级；
+-   `pdb` ：python调试工具，通过`python -m pdb xxx`启动；
+
+### 2.文档测试
+
+>   编写注释时，明确的写出函数的期望输入和输出，然后通过Python的文档测试模块`doctest` 可以直接提取注释中的代码并执行测试
+
+```python
+def test(x):
+    # 文档测试内容
+    '''
+    >>> test(2)
+    2
+    >>> test(4)
+    4
+    '''
+    return x
+
+# 进行文档测试
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod()
+```
+
+### 3.单元测试
+
+>   "测试驱动开发 TDD"；单元测试是用来对一个模块、一个函数或者一个类来进行正确性检验的测试工作。这种以测试为驱动的开发模式最大的好处就是确保一个程序模块的行为符合我们设计的测试用例，在将来修改的时候，可以极大程度地保证该模块行为的正确性；
+
+-   编写单元测试，需要引入python自带的`unittest`模块；
+
+    ```python
+    # 导入单元测试模块
+    import unittest
+
+    #编写测试类，需要从 unittest.TestCase 继承
+    class TestDict(unittest.TestCase):
+    	# 每一个测试方法必须以test开头，类似`test_xxx()`形式命名
+        def test_init(self):
+            d = list(range(10))
+            # 判断，是否相等，TestCase内置了许多测试类型
+            self.assertEqual(d[0], 0)
+            self.assertEqual(d[2], 2)
+    ```
+
+-   测试方式：
+
+    -   1.把单元测试做为脚本运行
+
+        ```python
+         if name=='main':
+            unittest.main()
+        ```
+
+    -   2.在命令行通过参数`-m unittest xxxx`直接运行;
+
+    -   测试通过或打印`ok`；失败会返回`FAIL`和错误位置；
+
+-   `setUp(), tearDown()`：会在每次测试开始和测试结束运行；
