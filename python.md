@@ -68,14 +68,40 @@
 -   一些点
     -   变量可以指向函数；
     -   函数名也是变量名；
+
 -   高阶函数：函数可以接收另一个函数做为参数，还可以把函数作为结果返回。
--   `map()`
--   `filter(fuction, iterable)` 根据函数返回的`True或False`确定可迭代对象元素的去留（True，保留）；
+
+-   `map(func, *iterables)`：将传入的函数以此作用到==可迭代对象==元素，并把结果作为新的==`Iterator`==返回；
+
+-   `filter(fuction, Iterable)` 根据函数返回的`True或False`确定==可迭代对象==元素的去留（True，保留）；
+
 -   `sorted(iterable, key, )`, 可以根据key指定的function排序，如`sorted(a, key=abs)`
--   函数作为返回值： 
--   匿名函数（lambda表达式）：只有一个表达式，返回值就是该表达式的结果。
--   装饰器：
--   匿名函数：
+
+-   闭包：
+
+-   匿名函数（lambda表达式）：只有一个表达式，返回值就是该表达式的结果。`lambda x:x*x`,分号前为函数参数，分号后表达式为函数返回值；
+
+-   装饰器`decorator`：1.函数也是对象，可以给变量赋值，2.装饰器就是一个返回函数的高阶函数，对参数函数进行修饰、包裹（做一些额外的工作）；
+
+    ```python
+    import functools
+    # log()返回一个内部函数；
+    def log(func)：
+    	# 修改函数名为func
+    	@functools.wraps(func)
+        def wrapper(*args, **kw):
+            print('call %s'%func.__name)
+            return func(*args, **kw)
+        return wrapper
+    # 需要借助python的@语法
+    @log
+    def now():
+        pass
+    # @log 放到函数定义处，相当于执行了，now=log(now),
+
+    ```
+
+-   偏函数：`functools.partial(func, *args, **keywords)` ；帮助我们创建一个新的函数，
 
 ## 5.模块
 
@@ -291,3 +317,43 @@ if __name__ == '__main__':
     -   测试通过或打印`ok`；失败会返回`FAIL`和错误位置；
 
 -   `setUp(), tearDown()`：会在每次测试开始和测试结束运行；
+
+## 8.进程和线程
+
+### 1.多进程
+
+- `fork()`：通过`os.fork()`创建进程，同`fork()`一致，父进程中返回子进程ID，子进程返回0；
+
+- `multiprocessing`：模块中的`Process`类来代表一个进程对象，
+
+  ```python
+  from multiprocessing import Process
+  import os
+
+  # 子进程要执行的代码
+  def run_proc(name):
+      print('Run child process %s (%s)...' % (name, os.getpid()))
+
+  if __name__=='__main__':
+      print('Parent process %s.' % os.getpid())
+      p = Process(target=run_proc, args=('test',))
+      print('Child process will start.')
+      # start()方法启动（创建子进程，去执行指定函数）
+      p.start()
+      # join()方法等待子进程结束，类似wait()或线程中的join
+      p.join()
+      print('Child process end.')
+  ```
+
+  - `Pool()` ：用于创建大量的子进程；
+
+- 进程间通信：`multiprocessing`中的`Queue, Pipes`等；
+
+### 2.多线程
+
+> `_thread`和`threading`，前者是低级模块，后者是高级模块，对前者的再封装。
+
+- 使用`Thread()`绑定线程函数，用`start()`启动，用`join()`等待；
+- 通过`Lock()`创建锁， 通过`acquire()`加锁，通过`release()`释放；
+- GIL：Global Interpreter Lock，任何python线程执行前，必须先获取GIL锁，然后，每执行100条字节码，解释器就自动释放GIL锁，让别的线程有机会执行；
+- `threading.local()`：
