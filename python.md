@@ -65,11 +65,19 @@
 
 ## 4.函数式编程
 
--   一些点
-    -   变量可以指向函数；
-    -   函数名也是变量名；
+-   函数式编程的三大特性
 
--   高阶函数：函数可以接收另一个函数做为参数，还可以把函数作为结果返回。
+    -   immutable data 不可变数据：默认变量不可变
+    -   first class function：使函数像变量一样来使用
+    -   尾递归优化：优化递归，每次递归都会重用stack
+
+-   函数式编程的几个技术
+
+    -   `map`&`reduce`：
+    -   `pipeline`：把函数实例成一个一个的`action`，然后把`action`放到一个数组或是列表中，然后把数据传给这个`action list`；数据依次被各个函数所操作；
+    -   `recursing`递归：
+    -   `currying`把一个函数的多个参数分解成多个函数，然后把函数多层封装起来；
+    -   `higher order function`高阶函数，可以接收另一个函数做为参数，还可以把函数作为结果返回。
 
 -   `map(func, *iterables)`：将传入的函数以此作用到==可迭代对象==元素，并把结果作为新的==`Iterator`==返回；
 
@@ -87,7 +95,7 @@
     import functools
     # log()返回一个内部函数；
     def log(func)：
-    	# 修改函数名为func
+    	# 修改函数名为func, func.__name__ == func
     	@functools.wraps(func)
         def wrapper(*args, **kw):
             print('call %s'%func.__name)
@@ -99,6 +107,16 @@
         pass
     # @log 放到函数定义处，相当于执行了，now=log(now),
 
+    ```
+
+-   `@`语法糖syntactic sugar
+
+    ```python
+    @decorator
+    def func():
+        pass
+    # 编译器会解释为
+    func = decorator(func)
     ```
 
 -   偏函数：`functools.partial(func, *args, **keywords)` ；帮助我们创建一个新的函数，
