@@ -437,3 +437,48 @@ if __name__ == '__main__':
 - 通过`Lock()`创建锁， 通过`acquire()`加锁，通过`release()`释放；
 - GIL：Global Interpreter Lock，任何python线程执行前，必须先获取GIL锁，然后，每执行100条字节码，解释器就自动释放GIL锁，让别的线程有机会执行；
 - `threading.local()`：
+
+## 9.其他
+
+### 1.IO
+
+-   IO操作面临异常情况，无法保证所有异常下，文件都得到关闭；可以使用`with`语句；
+
+    -   ```python
+        with open('/path/to/file', 'r') as f:
+            print(f.read())
+        ```
+
+-   像`open()`函数返回的这种有个`read()`方法的对象，在Python中统称为 file-like Object。除了file外，还可以是内存的字节流，网络流，自定义流等等。file-like Object 不要求从特定类继承，只要写个`read()`方法就行。
+
+-   `open()` 可以指定打开文件的编码方式`encoding`，默认utf-8编码；
+
+-   `b`：表示以二进制方式读写；
+
+-   ！！== 调用`write() `写入文件时，并不会立刻写入，而是放入缓存中，等待空闲时写入；只有调用`close()`方法，才会立刻将未写入的数据写入磁盘；
+
+### 2.文件操作
+
+### 3.序列化
+
+-   程序执行过程中，所有变量都是存放在内存中的，程序执行结束，变量就会消失；我们把变量从内存中变成可存储或传输的过程称之为序列化；可以借助`pickling`
+
+-   写入：
+
+    -   ```python
+        import pickle
+        d = dict(name='Bob', age=20, score=88)
+        pickle.dumps(d)
+
+        ```
+
+-   读取：
+
+    -   ```python
+        f = open('dump.txt', 'wb')
+        pickle.dump(d, f)
+        f.close()
+
+        ```
+
+-   当然，最好的序列化为`XML`和`JSON`
