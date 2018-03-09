@@ -182,6 +182,8 @@
 
 ## 5.模块
 
+### 1.模块定义
+
 -   模块：每个个`.py `文件都可以称为一个模块；
 
 -   包：含有一些模块文件和一个`__init__.py`（用于表明这个文件夹是特别的）的文件夹，；
@@ -215,6 +217,8 @@
     -   一般`__xxx__ `类型名称的变量，是特殊变量，可以被直接引用；例如`__name__, __author__ ` 
     -   类似`_xxx, __xxx`类型名称的变量，都是非公开的，不应该被直接引用。（但是可见的，引用不引用需要使用者自觉遵守）
 
+###2.pip使用
+
 -   第三方模块：通过`pip`安装，同时安装`python2`和`python3`需要用`pip2和pip3`区分；
 
     -   模块的搜索路径：通过`sys.path`查看。
@@ -222,12 +226,19 @@
     -   `pip `使用方法：
 
         ```shell
-        pip install SomePackage
-        pip show --files SomePackage
-        pip list --outdated
+        # 安装
+        pip install [options] SomePackage
+
+        # 查看SomePackage的信息（文件信息）
+        pip show [-f] SomePackage
+
+        # 查看所有安装包信息（）
+        pip list [-o|-u]
+
+        # 卸载
+        pip uninstall [options] <package>
         ```
 
-        ​
 
 ## 6.面向对象OOP
 
@@ -241,26 +252,35 @@
 
     -   ```python
         class Student(object):
-          pass
+          def __init(self, x,y..):
+            self.m1 = x
+            self.m2 = y
+            ...
         ```
 
     - 通过`class`关键字定义类；
     - 通过`(object)` ：表明继承关系；
-    - 后面跟类的定义；
+    - 通过`__init__(self, ...) `构造类的对象；
 
-- `__init__()`：类似C++中的构造函数；第一个参数必须是`self`；
+- `__init__()`：类似C++中的构造函数；第一个参数必须是`self`，指向实例化对象本身；
 
-- 在类中定义的函数，第一个参数永远都是`self`；
+- 在类中定义的函数，第一个参数永远都是`self`（类似`this`指针）；
 
-- 访问控制：如果要让内部属性不被外部访问，可以把属性的名称前加上两个下划线`__`，python解释器会将其名称转换为`_类名__属性名`达到隐藏的目的；
+- 成员命名：
 
-- 在python中，变量名类似`__xxxx__`，双下划线开始，双下划线结束的，是特殊变量；特殊变量可以直接访问；
+    -   `_xx `：还是`_xx `，只是表明这个成员不想被外部访问；
+    -   `__xx `：最终变为 ` _ClassName__xx `，用此表示是内部成员，同时控制外部对齐访问；
+    -   `__xx__` ：还是 `__xx__ `，一般是作为系统保留的具有特殊作用的变量名；
 
 - 动态语言的“鸭子类型”， 它并不要求严格的继承体系，一个对象只要“看起来像鸭子，走起路来像鸭子”，那他就可以被看做是鸭子。
 
 - 使用`type()`或`isinstance(obj, class_or_tuple)`判断类型；
 
-- 使用`dir()`
+- 使用`isinstance() `判断是否为某种类型；
+
+- 使用`dir()`获得一个对象的所有属性和方法；
+
+- 使用`hasattr() `判断一个对象是否具有某种属性或方法；
 
 - 实例属性和类属性：
 
@@ -270,26 +290,69 @@
 
     ```python
     class Student(object):
-      	def __init(self, name):
+      	def __init__(self, name):
           	self.name = name			# 实例对象属性
         class = '302'					# 类属性
     ```
 
+  - 当成员函数的第一个参数不是`self `时，则这个成员函数属于类而不属于事例对象；
+
 ### 2.高级编程
 
--   创建类的示例后，可以给该实例绑定任何属性和方法，绑定的属性和方法只跟这个示例有关，跟类和其他实例无关；
+-   创建类的示例后，可以给 ==实例==绑定任何属性和方法，绑定的属性和方法只跟这个实例对象有关，跟类和其他实例无关；
 
-    ```python
-    s = Stuent()
-    s.name = "lfeng"		# 任意绑定属性和方法 
-    ```
+    -   绑定属性：
 
--   限制实例的属性：通过`__slots__`变量，通过给该变量赋值一个元组，来规定允许绑定的属性名称；只对自身起作用，对通过继承的子类不起作用；
+        ```python
+        s = Stuent()
+        s.name = "lfeng" 
+
+        ```
+
+    -   绑定方法：
+
+        ```python
+        def test(self):
+            pass
+
+        from types import MethodType
+        s.test = MethodType(test, s)
+        ```
+
+-   给所有类绑定方法：
+
+    -   ```python
+        def test(self):
+            pass
+        ClassName.test = test
+        ```
+
+-   限制实例的属性和方法名：通过`__slots__`变量，通过给该变量赋值一个元组，来规定允许绑定的属性名称和方法名称；只对自身类起作用，对通过继承的子类不起作用；
+
+    -   ```python
+        class A(object):
+            # 只允许存在名为name、age的属性或方法
+            __slots__ = ('name', 'age')
+            pass
+        ```
 
 -   直接定义的属性无法做到数据类型，数据范围等的限制，一般需要依靠`get(), set()`函数的帮助；
 
     -   通过`@property`装饰器可以将一个方法转换为属性调用；
+
     -   `@property` 还会创建另一个装饰器`@xxx.setter`；负责把`xxx`方法变成属性赋值，不定义`setter`方法，则该属性就为只读的；
+
+        ```python
+        class A(object):
+            
+            @property
+            def name(self):
+                return self._name
+            
+            @name.setter
+            def name(self, name):
+                self._name = name
+        ```
 
 -   类中的特殊属性
 
@@ -297,7 +360,7 @@
 
     -   `__del__(self)`：在对象被销毁时调用；
 
-    -   `__str__(self)`：在类被`print()`或`str()`调用时调用；
+    -   `__str__(self)`：返回一个字符串，在实例化对象被`print()`或`str()`调用时调用；
 
     -   `__iter__(self)` ：如果一个类想被用于`for...in `循环，就必须实现一个`__iter__()`方法；该方法返回一个迭代对象，然后，Python的`for`循环就会不断调用该迭代对象的`__next__()` 方法拿到循环的下一个值；
 
@@ -322,18 +385,20 @@
 
     -   `__getitem__(self, key)` ：使用`x[key]`索引操作符的时候调用;
 
-    -   `__call__` ：实例本身可以做为一个方法，直接对实例进行调用；
+    -   `__call__` ：实例化对象本身可以做为一个方法，直接对实例进行调用；
 
-- 枚举类：通过`Enum`类定义的类型；
+- 枚举类：通过`Enum `类定义的类型；`value `属性则是自动赋给成员的`int`变量；
 
   ```python
   from enum import Enum
-
   Month = Enum('Month', ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'))
+  Month.Jan.value 
+  >> 1
+
   # 还可以精确的控制枚举类型
   from enum import Enum, unique
 
-  @unique
+  @unique     #帮助检查保证没有重复值
   class Weekday(Enum):
       Sun = 0 # Sun的value被设定为0
       Mon = 1
@@ -346,15 +411,15 @@
 
   - `@unique` 装饰器可以帮助我们检查保证没有重复值；
 
-- `type()` ：1.查看一个类型或变量类型，2.创建一个新类型；
+- `type()` ：1.查看一个类型或变量类型，2.创建一个新类型；通过`type()`函数创建的类和直接写class是完全一样的，因为Python解释器遇到class定义时，仅仅是扫描一下class定义的语法，然后调用`type()`函数创建出class。
 
   ```python
   # 要创建一个class类，type()函数以此传入3个参数：
   # 1.calss的名称
-  # 2.继承的父类集合，（元组）
-  # 3.calss的方法名称与函数绑定
+  # 2.继承的父类集合，（元组，所以，当只有一个时写法为‘（xxx,）’）
+  # 3.calss的方法名称 和 函数绑定
 
-  def fd(self, name="world"):
+  def fn(self, name="world"):
       print('Hello, %s.'%name)
       
   Hello = type("Hello", (object,), dict(hello=fn))
@@ -366,7 +431,7 @@
 
 > 在函数出错时，c往往会通过返回值表示是否发生错误，这导致正确结果和错误代码混和，一旦出错，还要一级一级上报；所以一般高级语言通常都内置了一套`try...except...finally...`的错误处理机制；
 
-- `try`来运行代码，如果发生错误，则后续代码不会继续执行，直接跳转到错误处理，即`except`语句块；
+- `try `：来运行代码，如果发生错误，则后续代码不会继续执行，直接跳转到错误处理，即`except`语句块；
 - `except`：如果没有发生错误，则此段不会执行；发生错误，会被此段捕获；
 - `finally` ：如果有此段，则最后一定会执行（发生不发生异常都会执行）；
 - 错误种类：错误也是`class`，所有错误类型都继承自`BaseException`，捕获时不但可以捕获指定类型，还能将子类型同时捕获；
@@ -494,7 +559,7 @@ if __name__ == '__main__':
 
 -   `b`：表示以二进制方式读写；
 
--   ！！== 调用`write() `写入文件时，并不会立刻写入，而是放入缓存中，等待空闲时写入；只有调用`close()`方法，才会立刻将未写入的数据写入磁盘；
+-   ！！ ==调用`write() `写入文件时，并不会立刻写入，而是放入缓存中，等待空闲时写入；只有调用`close()`方法，才会立刻将未写入的数据写入磁盘；== 
 
 ### 2.文件操作
 
@@ -508,7 +573,6 @@ if __name__ == '__main__':
         import pickle
         d = dict(name='Bob', age=20, score=88)
         pickle.dumps(d)
-
         ```
 
 -   读取：
@@ -517,7 +581,19 @@ if __name__ == '__main__':
         f = open('dump.txt', 'wb')
         pickle.dump(d, f)
         f.close()
-
         ```
 
 -   当然，最好的序列化为`XML`和`JSON`
+
+### 4.正则表达式
+
+| 符号  | 匹配       | 符号    | 匹配           | 符号  | 匹配           |
+| ----- | ---------- | ------- | -------------- | ----- | -------------- |
+| `\d`  | 一个数字   | `\w`    | 一个字母或数字 | `\s`  | 空白符         |
+| `*`   | 任意个字符 | `+`     | 至少一个字符   | `？`  | 1或0个字符     |
+| `{n}` | n个字符    | `{n,m}` | n-m个字符      | `A|B` | A 或 B         |
+| `^`   | 开头       | `$`     | 结束           | `[ ]` | 精确的匹配范围 |
+
+-   `re `模块中的`match `方法可用于判断正则表达式是否匹配成功；
+    -   成功返回一个`match `对象；
+    -   失败返回`none `
