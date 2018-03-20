@@ -93,7 +93,13 @@
 ### 2.列表生成式
 
 -   `list(iterable)`函数，可以把一个可迭代对象转换为列表；
--   `[i for i in range(10)]`列表生成式，生成新的`list `
+
+-   `[exp for iter_var in iterable]`列表生成式，生成新的`list `，==其中，`iter_var `可以跟exp相关，也可以不相关==
+
+    -   ```python
+        [i*i for i in range(10)]
+        [random.choice(range(10)) for _ in range(9)]    #后面的for循环仅表示循环多少次。
+        ```
 
 ### 3.生成器
 
