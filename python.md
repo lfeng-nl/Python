@@ -73,7 +73,14 @@
 ### 3.其他
 
 -   `global`和`nonlocal`：
-    -   `global `：用来在函数或其他局部作用域中使用==全局变量==。但是如果不修改全局变量也可以不使用global关键字。
+    -   `global `：用来在函数或其他==局部作用域中使用全局变量==。但是如果不修改全局变量也可以不使用global关键字。
+
+        ```python
+        def test():
+            global g_TEST
+            g_TEST = 10
+        ```
+
     -   `nonlocal `：来在函数或其他作用域中使用==外层(非全局)变量==，如闭包中；
 -   变量作用域：LEGB，L>E>G>B
     -   L：local，函数内部作用域；
@@ -614,9 +621,82 @@ if __name__ == '__main__':
 - GIL：Global Interpreter Lock，任何python线程执行前，必须先获取GIL锁，然后，每执行100条字节码，解释器就自动释放GIL锁，让别的线程有机会执行；
 - `threading.local()`：
 
-## 9.异步IO
+## 9.编码方式
 
-## 10.其他
+### 1.字符编码
+
+- ASCII，（American Standard Code for Information Interchange，美国信息交换标准代码），用8个字节来表示字符，最高位为0，共127个，用于表示英文字符和控制码；
+- 扩展字符集：将127号后面的进行编码，添加特殊字符；
+- 由于ASCII编码不能表示汉字，中国定制了GB2312编码；小于127的字符同ASCII码，两个大于127的字符连在一起，表示一个汉字；（原先ACSII中存在数字、标点、字母也重新进行了两字节编码，成为全角字符；原先ASCII中的叫半角字符）；
+- GBK标准，对GB2312的扩展，包含GB2312的所有内容，同时又增加了近20000个新汉字和符号；汉字占两个字节；
+- Unicode：通常用两个字节表示一个字符；会造成浪费；
+-  Unicode在网络传输中，出现了UTF-8，UTF-16两个标准，即分别每次传输8位和16位；
+- 用UTF-8 编码的文件会在打开时转为Unicode编码，保存和传输时还是UTF-8编码；
+
+### 2.python字符编码
+
+- 在python3中，字符串是以Unicode编码的，`ord()`：获取字符的整数表示，`chr()`：把编码转换为字符；
+
+  ```python
+  # 下面内容等价
+  '\u4e2d\u6587'
+  '中文'
+  ```
+
+- python3中的字符串类型为`str`，当需要在网络上传输，或保存到硬盘上时，就要把`str`转为`bytes `(用带`b`的前缀的单引号或双引号表示 ) `b'abc'`;
+
+- `str`的`encode()`方法可以编码为指定的bytes；
+
+  ```python
+  >>> 'ABC'.encode('ascii')
+  b'ABC'
+  >>> '中文'.encode('utf-8')
+  b'\xe4\xb8\xad\xe6\x96\x87'
+  ```
+
+- `bytes` 转为`str`用`decode()`方法；
+
+  ```python
+  >>> b'\xe4\xb8\xad\xe6\x96\x87'.decode('utf-8')
+  '中文'
+  ```
+
+## 10.python的JSON模块
+
+- `json.dumps()`：将dict类型的数据转为str；
+
+  ```python
+  >>> d = {'name':'lfeng', 'email':'lfengnl@163.com'}
+  >>> s = json.dumps(d)
+  '{"name": "lfeng", "email": "lfengnl@163.com"}'
+  ```
+
+- `json.loads()`：将str类型的数据转为dict；
+
+  ```python
+  >>> d = json.loads('{"name": "lfeng", "email": "lfengnl@163.com"}')
+  {"name": "lfeng", "email": "lfengnl@163.com"}
+  ```
+
+- `json.dump()`：将dict类型的数据转为str，并写入到json文件中；
+
+  ```python
+  json.dump(d, open('test.json', "w")) 
+  ```
+
+- `json.load()`：从json文件中读取数据并转为`dict`；
+
+  ```python
+  d = json.load(open('test.json'))
+  ```
+
+- 注意，在与前端交互时，有时接收到的数据类型为`bytes`，需要转换为`str`：
+
+  ```python
+  data = json.loads(request.body.decode('utf-8'))
+  ```
+
+## 其他
 
 ### 1.IO
 
