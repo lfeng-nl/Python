@@ -46,29 +46,47 @@
     def f2(a, b, c=0, *, d, **kw):
    ```
 
-- 可变参数：`*param`：从此处开始直到结束的所有==位置参数==（Positional Arguments）都将被收集并汇聚成为一个成为`param`的==元组==；例如
+- 可变参数：`*param`：
 
-  - ```python
-    def test(a, *b):
-        print(a)
-        print(b)
-        
-    test(1,2,3,4)
-    >> 输出：1
-            (2,3,4)
-    ```
+  - 用于函数定义：从此处开始直到结束的所有==位置参数==（Positional Arguments）都将被收集并汇聚成为一个成为`param`的==元组==；例如
 
-- 命名关键字参数`**param` ：从此处开始直到结束的所有的==关键字参数==都将被收集并汇集为一个名为`param`的==字典==；例如：
+    - ```python
+      def test(a, *param):
+          print(a)
+          print(param)
+          
+      test(1,2,3,4)
+      >> 输出：1
+              (2,3,4)
+      
+      ```
 
-  - ```python
-    def f(**kw):
-      print(kw)
-     
-    f(test1=1, test2=2)			# 输出：{‘test1’:1， ‘test2':2}
-    # 或者
-    d = {'test1':1, 'test2':2}
-    f(**d)						# 输出：{‘test1’:1， ‘test2':2}
-    ```
+  - 用于函数调用时：``test(*tup_p)，将一个元组扩展为参数列表：
+
+    - ```python
+      param = (1,2,3)
+      test(*param) <==等同于==> test(1,2,3)
+      ```
+
+- 命名关键字参数`**param` ：
+
+  - 用于函数定义：从此处开始直到结束的所有的==关键字参数==都将被收集并汇集为一个名为`param`的==字典==；例如：
+
+    - ```python
+      def test(**kw):
+          print(kw)
+       
+      test(p1=1, p2=2)			# 输出：{‘test1’:1， ‘test2':2}
+      >>> {'p1:1, p2:2'}
+      ```
+
+  - 用于函数调用：将字典类型解析为关键字参数：
+
+    - ```python
+      param = {'p1':1, 'p2':2}
+      
+      test(**param)   <====等同于====>  test(p1=1, p2=2)
+      ```
 
 
 ### 3.其他
