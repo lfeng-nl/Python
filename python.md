@@ -4,8 +4,26 @@
 ###1.数据类型
 
 - 基本数据类型：`int, float, str, bool(True, False), None `
+
 - 容器：`list, str, tuple, dict, set 等` 可以实现==`in`和`not in `==表达式和==索引==操作；
+
 - None：表示为空，一个特殊的对象，类型为Nonetype，表示数据为空，对应的布尔值为False；
+
+- 命名元组：`collections.namedtuple`
+
+  - ```python
+    from collections import namedtuple
+    Point = namedtuple('Point', ['x', 'y'])
+    p = Point(1, 2)
+    p
+    >> Point(x=1, y=2)
+    p.x
+    >> 1
+    p.y
+    >> 2
+    ```
+
+- 
 
 ### 2.运算符
 
@@ -61,7 +79,7 @@
       
       ```
 
-  - 用于函数调用时：``test(*tup_p)，将一个元组扩展为参数列表：
+  - 用于函数调用时：`test(*tup_p)`，将一个元组扩展为参数列表：
 
     - ```python
       param = (1,2,3)
@@ -124,7 +142,7 @@
 
     -   ```python
         [i*i for i in range(10)]
-        [random.choice(range(10)) for _ in range(9)]    #后面的for循环仅表示循环多少次。
+        [random.choice(range(10)) for _ in range(9)]    #后面的for循环仅表示循环多少次。_ 常用于表示临时变量
         ```
 
 ### 3.生成器
@@ -132,7 +150,7 @@
 生成器`generator`：通过边循环边计算生成数据，
 
 -   1.使用生成器表达式：将列表生成式的`[]`换为`()`，如`a = (i for i in range(10))` a就是一个生成器；
--   2.使用`yield `： ；
+-   2.使用`yield `： 
 -   可以通过`for`循环或`next()`取出生成器中的数据；
 
 ### 4.迭代器
@@ -264,7 +282,7 @@
 
 ### 1.模块定义
 
-- 模块：每个个`.py `文件都可以称为一个模块；
+- 模块：每一个`.py `文件都可以称为一个模块；
 
 - 包：含有一些模块文件和一个`__init__.py`（用于表明这个文件夹是特别的）的文件夹，；
 
@@ -293,22 +311,22 @@
 
 - 模块分为直接运行和导入两种情况，当模块直接运行时会把一个特殊变量`__name__ `赋值为`__main__ `;
 
-- 最小化`from *`的破坏：`_X`和`__all__`:
+- 最小化`from *`的破坏：`_X`和`__all__`：
 
     -   作用：防止`from *`导出包中所有对象名；
     -   `_x`指明不希望被`from *`导出的对象名；
     -   `__all__ = ['xx', 'xx']`，指明希望通过`from *`语句导出的对象名；
 
 
--   访问控制：；
+-   访问控制：
     -   一般`__xxx__ `类型名称的变量，是系统保留特殊变量，可以被直接引用；例如`__name__, __author__ ` 
     -   类似`_xxx, __xxx `类型名称的变量，约定都是非公开的，不应该被直接引用；但并无访问权限控制，可以直接访问到，仅作为遵守规范；
 -   变量：`__file__`，该变量自动的被设置为代码所在的python模块的文件名，`os.path.dirname(__file__)`自动获取自身的路径；
 
 ### 2.模块使用
 
-- 模块的导入路径：1.程序主目录、2.PYTHONPATH目录、3.标准链接库、4.任何 .pth 文件的内容；==以上四个文件组成了`sys.path`==；
-- ​
+- 模块的导入路径：1.程序主目录、2.`PYTHONPATH`目录、3.标准链接库、4.任何 .pth 文件的内容；==以上四个文件组成了`sys.path`==；
+- 
 
 ###3.pip使用
 
@@ -691,41 +709,6 @@ if __name__ == '__main__':
   '中文'
   ```
 
-## 10.python的JSON模块
-
-- `json.dumps()`：将dict类型的数据转为str；
-
-  ```python
-  >>> d = {'name':'lfeng', 'email':'lfengnl@163.com'}
-  >>> s = json.dumps(d)
-  '{"name": "lfeng", "email": "lfengnl@163.com"}'
-  ```
-
-- `json.loads()`：将str类型的数据转为dict；
-
-  ```python
-  >>> d = json.loads('{"name": "lfeng", "email": "lfengnl@163.com"}')
-  {"name": "lfeng", "email": "lfengnl@163.com"}
-  ```
-
-- `json.dump()`：将dict类型的数据转为str，并写入到json文件中；
-
-  ```python
-  json.dump(d, open('test.json', "w")) 
-  ```
-
-- `json.load()`：从json文件中读取数据并转为`dict`；
-
-  ```python
-  d = json.load(open('test.json'))
-  ```
-
-- 注意，在与前端交互时，有时接收到的数据类型为`bytes`，需要转换为`str`：
-
-  ```python
-  data = json.loads(request.body.decode('utf-8'))
-  ```
-
 ## 其他
 
 ### 1.IO
@@ -749,7 +732,7 @@ if __name__ == '__main__':
 
 ### 3.序列化
 
--   程序执行过程中，所有变量都是存放在内存中的，程序执行结束，变量就会消失；我们把变量从内存中变成可存储或传输的过程称之为序列化；可以借助`pickling`
+-   程序执行过程中，所有变量都是存放在内存中的，程序执行结束，变量就会消失；我们把变量从内存中变成可存储或传输的过程称之为序列化；可以借助pickling
 
 -   写入：
 
@@ -789,9 +772,58 @@ if __name__ == '__main__':
     -   成功返回一个`match `对象；
     -   失败返回`none `；
 
+### 5.JSON
+- `json.dumps()、json.loads()`：dict 和 str相互转化；
+
+     - `json.dumps()`
+
+          ```python
+          >> d = {'name':'lfeng', 'email':'lfengnl@163.com'}
+          >> s = json.dumps(d)
+          # s = '{"name": "lfeng", "email": "lfengnl@163.com"}'
+          ```
+
+     - `json.loads()`：将str类型的数据转为dict；
+
+       ```python
+       >>> d = json.loads('{"name": "lfeng", "email": "lfengnl@163.com"}')
+       {"name": "lfeng", "email": "lfengnl@163.com"}
+       ```
+
+- `json.dump()、json.load()`：dict 和 json 文件 相互转化；
+
+  - `json.dump()`：将dict类型的数据转为str，并写入到json文件中；
+
+    ```python
+    json.dump(d, open('test.json', "w")) 
+    ```
+
+  - `json.load()`：从 json 文件中读取数据并转为`dict`；
+
+    ```python
+    d = json.load(open('test.json'))
+    ```
+
+- 注意，在与前端交互时，有时接收到的数据类型为`bytes`，需要转换为`str`：
+
+  ```python
+  data = json.loads(request.body.decode('utf-8'))
+  ```
+
+
 ## 11.技巧
 
--   `locals() ` ：返回一个字典，包含了函数执行到该时间点时所有定义的一切变量，字典形似为，变量名称和值对应；在Django模版导入上下文时可能有用；
--   由` d = {True:'1', 1:'2', 1.0:'3'}  d[True]=?`引出的问题：
+- `locals() ` ：返回一个字典，包含了函数执行到该时间点时所有定义的一切变量，字典形似为，变量名称和值对应；在Django模版导入上下文时可能有用；(会比较大)
+
+- 由` d = {True:'1', 1:'2', 1.0:'3'}  d[True]=?`引出的问题：
     -   答案为`'3' `，`True, 1, 1.0 `为相同的键值，后面的会覆盖前面的；
     -   字典判断为相同键值的条件：1.`值是否相同（ __eq__()`方法），2.哈希值是否相同（`__hash__()`方法返回相同值）；
+
+- 字典类型加双**号，可以转换为关键字参数；
+
+    - ```python
+        d = {'a':1, 'b':2}
+        test(**d) --> test(a=1, b=2)
+        ```
+
+-   
