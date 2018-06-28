@@ -633,41 +633,48 @@ if __name__ == '__main__':
 
 ### 1.多进程
 
+#### 利用系统原生`fork()`
+
 - `fork()`：通过`os.fork()`创建进程，同`fork()`一致，父进程中返回子进程ID，子进程返回0；
 
-- `multiprocessing`：模块中的`Process`类来代表一个进程对象，
+#### 利用`multiprocessing `模块
 
-  ```python
-  from multiprocessing import Process
-  import os
+- `multiprocessing `提供了了`Process`类来代表一个进程对象；适用方式：先创建对象，start 方法，join方法，
 
-  # 子进程要执行的代码
-  def run_proc(name):
-      print('Run child process %s (%s)...' % (name, os.getpid()))
+```python
+from multiprocessing import Process
+import os
 
-  if __name__=='__main__':
-      print('Parent process %s.' % os.getpid())
-      p = Process(target=run_proc, args=('test',))
-      print('Child process will start.')
-      # start()方法启动（创建子进程，去执行指定函数）
-      p.start()
-      # join()方法等待子进程结束，类似wait()或线程中的join
-      p.join()
-      print('Child process end.')
-  ```
+# 子进程要执行的代码
+def run_proc(name):
+    print('Run child process %s (%s)...' % (name, os.getpid()))
 
-  - `Pool()` ：用于创建大量的子进程；
+if __name__=='__main__':
+    print('Parent process %s.' % os.getpid())
+    p = Process(target=run_proc, args=('test',))
+    print('Child process will start.')
+    # start()方法启动（创建子进程，去执行指定函数）
+    p.start()
+    # join()方法等待子进程结束，类似wait()或线程中的join
+    p.join()
+    print('Child process end.')
+```
 
 - 进程间通信：`multiprocessing`中的`Queue, Pipes`等；
+- `Pool()` ：用于创建大量的子进程；
 
 ### 2.多线程
 
 > `_thread`和`threading`，前者是低级模块，后者是高级模块，对前者的再封装。
+>
+> 使用threading模块；
 
-- 使用`Thread()`绑定线程函数，用`start()`启动，用`join()`等待；
-- 通过`Lock()`创建锁， 通过`acquire()`加锁，通过`release()`释放；
-- GIL：Global Interpreter Lock，任何python线程执行前，必须先获取GIL锁，然后，每执行100条字节码，解释器就自动释放GIL锁，让别的线程有机会执行；
-- `threading.local()`：
+- 使用`t = threading.Thread(target=function, name='threadName)`创建Thread对象，将函数同线程绑定；
+- 用`t.start()`启动，用`join()`等待；
+- 通过`lock = thtrading.Lock()`创建一个锁， 
+- 通过`lock.acquire()`加锁，通过`lock.release()`释放；acquire :获得。
+- GIL：Global Interpreter Lock，任何python线程执行前，必须先获取GIL锁，然后，每执行100条字节码，解释器就自动释放GIL锁，让别的线程有机会执行；所以，多线程在Python中只能交替执行，即使100个线程跑在100核CPU上，也只能用到1个核。 
+- `threading.local()`：创建 ThreadLocal对象，每个Thread 对它都可以读写 属性，但是相互不影响；可以看做全局变量，但每个属性都是线程的局部变量；
 
 ## 9.编码方式
 
