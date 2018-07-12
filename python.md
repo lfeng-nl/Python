@@ -833,4 +833,20 @@ if __name__=='__main__':
         test(**d) --> test(a=1, b=2)
         ```
 
--   
+- `enumerate()`：返回一个`enumerate`对象，使用`__next__()`方法返回一个包含计数的元组
+
+    ```python
+    >>> seasons = ['Spring', 'Summer', 'Fall', 'Winter']
+    >>> list(enumerate(seasons))
+    [(0, 'Spring'), (1, 'Summer'), (2, 'Fall'), (3, 'Winter')]
+    >>> list(enumerate(seasons, start=1))
+    [(1, 'Spring'), (2, 'Summer'), (3, 'Fall'), (4, 'Winter')]
+    ```
+
+    - ==可用于遍历时同时得到其下标==
+
+      ```python
+      for index, x in enumerate(list_xx):
+      ```
+
+      
