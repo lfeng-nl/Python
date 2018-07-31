@@ -1,7 +1,9 @@
 本文用于记录python知识点  
-##1.基础
 
-###1.数据类型
+
+## 1.基础
+
+### 1.数据类型
 
 - 基本数据类型：`int, float, str, bool(True, False), None `
 
