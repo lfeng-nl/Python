@@ -416,6 +416,13 @@
         pip uninstall [options] <package>
         ```
 
+### 4.包的搜索路径
+
+- `sys.path`：查看python包搜索的路径；
+- 修改搜索路径：
+  - 1.直接修改`sys.path: sys.path.append('/usr/....``')`
+  - 2.设置环境变量`PYTHONPATH`，该环境变量会自动添加到搜索路径中`export PYTHONPATH=xxx`。
+  - 3.在已有的搜索路径下添加`.pth`文件：内容`import site; site.addsitedir('/usr/...') `
 
 ## 6.面向对象OOP
 
