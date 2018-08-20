@@ -509,6 +509,8 @@
 
 ### 2.高级编程
 
+- `__getattr__`：当属性查询不到时会被`__getattr__`捕获，通常需要返回一个值或抛出`AttributeError`异常；
+
 - 创建类的示例后，可以给 ==实例==绑定任何属性和方法，绑定的属性和方法只跟这个实例对象有关，跟类和其他实例无关；
 
 - 给所有类绑定方法：
@@ -631,13 +633,96 @@
 
 ### 1.装饰器
 
+> 装饰器提供了 一种方法，在函数和类定义语句末尾插入自动运行代码，（def和class语句后），
+>
+> 装饰器自身是一个返回可调用对象的可调用对象；
+
+#### 1.函数装饰器
+
+> 函数装饰器语法关键在于，@decorator ---> 相当于 func = decorator(func);
+>
+> 也就是被装饰函数==装饰器内部的包装函数，包装函数执行额外代码后再调用原有被装饰函数；
+
+- ```python
+  def decorator(F):
+      return F
+  
+  @decorator
+  def func(): ...
+  ```
+
+- ```python
+  import functools
+  # log()返回一个内部函数；
+  def log(func)：
+  	# 修改函数名为func, func.__name__ == func
+  	@functools.wraps(func)
+      def wrapper(*args, **kw):
+          print('call %s'%func.__name)  # --> 添加的内容
+          return func(*args, **kw)
+      return wrapper
+  # 需要借助python的@语法
+  @log
+  def now():
+      pass
+  # @log 放到函数定义处，相当于执行了，now=log(now),
+  ```
+
+- 
+
+#### 2.类装饰器
+
+- ```python
+  @decorator
+  class C:
+      ...
+  # 等同于
+  class C:
+      C = dcecorator(c)
+  ```
+
+- 
+
 ### 2.元类
 
-> 通常是添加实例创建时运行的逻辑,元类在类创建时运行,他们通常用来管理或扩展类的钩子,而不是管理其实例
+> 通常是添加实例创建时运行的逻辑,元类在类创建时运行,他们通常用来管理或扩展类的钩子,而不是管理其实例，
+>
+> metaclass 允许创建类或者修改类，可以把类看成metaclass创建出来的实例；
+>
+> `__new__(cls, name, bases, attrs, **kwargs)`方法接收到的参数依次是：
+>
+> 1. 当前准备创建的类；
+> 2. 类的名字；
+> 3. 类继承的父类集合；
+> 4. 类的属性和方法集合（不包括继承的）。
+
+- ```python
+  class ListMetaclass(type):  --> 从type类型派生；
+      
+   # 传入metaclass时，Python解释器在创建Mylist时，要通过ListMetaclass.__new__()来创建
+  class Mylist(list, metaclass=ListMetaclass):
+      pass
+  ```
+
+- `__class__`：一个实例所属的类；普通对象就是所属的类，普通类就是`type`或`元类`；
+
+### 3.管理属性
+
+- `__getattr__, __setattr__`：将定义属性和获取和赋值指向通用的处理器方法；
+
+- `property()`：把特定属性访问定位到get和set处理器函数，也叫特性；
+
+  - ```python
+    attribut = property(fget, fset, fdel, doc),
+    ```
+
+  - 
 
 ## 7.异常、调试和测试
 
 > 在函数出错时，c往往会通过返回值表示是否发生错误，这导致正确结果和错误代码混和，一旦出错，还要一级一级上报；所以一般高级语言通常都内置了一套`try...except...finally...`的错误处理机制；
+
+### 1.异常处理
 
 - `try `：来运行代码，如果发生错误，则后续代码不会继续执行，直接跳转到错误处理，即`except`语句块；
 
@@ -645,7 +730,11 @@
 
 - `finally` ：如果有此段，则最后一定会执行（发生不发生异常都会执行）；
 
+- `raise `：抛出异常；
+
 - 错误种类：错误也是`class`，所有错误类型都继承自`BaseException`，捕获时不但可以捕获指定类型，还能将子类型同时捕获；
+
+- 自定义异常：`Exception()`,
 
 - `logging`：模块记录错误信息；
 
@@ -653,14 +742,20 @@
 
   ```python
   try:
-      ...
-  except (IOError, ZeroDivisionError), x:
-      print x
+  	pass
+  except Exception1:
+      pass
+  except Exception2:
+      pass
   else:
-      ....
+      pass
+  finally:
+      pass
   ```
 
-  ​
+- `with/as` 环境管理：
+
+  - with/as 语句的设计是作为try/finally用法模式的替代方案。
 
 ### 1.调试
 
