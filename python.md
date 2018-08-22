@@ -505,7 +505,6 @@
 
   - 当成员函数的第一个参数不是`self `时，则这个成员函数属于类而不属于事例对象；
 
-  - python3中,类方法需要通过类调用,不能通过实例调用
 
 ### 2.高级编程
 
@@ -555,10 +554,10 @@
   Month = Enum('Month', ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'))
   Month.Jan.value 
   >> 1
-
+  
   # 还可以精确的控制枚举类型
   from enum import Enum, unique
-
+  
   @unique     #帮助检查保证没有重复值
   class Weekday(Enum):
       Sun = 0 # Sun的value被设定为0
@@ -579,12 +578,20 @@
   # 1.calss的名称
   # 2.继承的父类集合，（元组，所以，当只有一个时写法为‘（xxx,）’）
   # 3.calss的方法名称 和 函数绑定
-
+  
   def fn(self, name="world"):
       print('Hello, %s.'%name)
       
   Hello = type("Hello", (object,), dict(hello=fn))
   ```
+
+- 静态方法和类方法
+
+    - 静态方法：嵌套在一个类中，没有self参数的简单函数，并且旨在操作类属性而不是实例属性；用`@staticmethod`修饰；
+    - 类方法：传递给它们的第一个参数是一个类对象而不是实例；用`@classmethod`修饰；
+    - 区别点：(归根是两种方法传入参数不同)1.两者都能通过实例或类调用，2.静态方法第一个参数传入类，可以在方法内调用类属性；类方法无传入函数，无法操作类属性，通常用于设置环境变量等操作；
+
+- `__new__(), __init__()`
 
 ###  3.运算符重载
 
