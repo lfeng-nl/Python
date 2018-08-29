@@ -864,16 +864,33 @@ if __name__=='__main__':
 
 ### 2.多线程
 
-> `_thread`和`threading`，前者是低级模块，后者是高级模块，对前者的再封装。
+> GIL：Global Interpreter Lock，全局解释器锁，语言解释器用于同步线程的一种机制，使得任何时刻仅有一个线程。
 >
-> 使用threading模块；
+> Cpython中依靠GIL，防止多个本地线程执行Python字节码；GIL就是一个防止多线程执行机器码的Mutex；及时有多核CPU，当同时两个线程被调用时，由于锁的存在，只能有一个线程被执行；
+>
+> Python的多线程在多核CPU上，只对IO密集型计算产生正面效果，对于CPU密集型多线程效率会大幅下降；
+>
+> python 虚拟机工作方式: 1.设置GIL, 2.切换进一个线程运行, 3.执行字节码,(或让出控制权), 4.把线程设置回睡眠状态(切出线程), 5解锁GIL, 6.重复上述
+>
+> 当调用扩展外部代码时, GIL会保持锁定, 直到函数执行结束;(因为没有Python字节码计数)
+
+#### 1.基本使用法式
 
 - 使用`t = threading.Thread(target=function, name='threadName)`创建Thread对象，将函数同线程绑定；
 - 用`t.start()`启动，用`join()`等待；
-- 通过`lock = thtrading.Lock()`创建一个锁， 
-- 通过`lock.acquire()`加锁，通过`lock.release()`释放；acquire :获得。
-- GIL：Global Interpreter Lock，任何python线程执行前，必须先获取GIL锁，然后，每执行100条字节码，解释器就自动释放GIL锁，让别的线程有机会执行；所以，多线程在Python中只能交替执行，即使100个线程跑在100核CPU上，也只能用到1个核。 
-- `threading.local()`：创建 ThreadLocal对象，每个Thread 对它都可以读写 属性，但是相互不影响；可以看做全局变量，但每个属性都是线程的局部变量；
+- 锁:
+  - 通过`lock = threading.Lock()`创建一个锁， 
+  - 通过`lock.acquire()`加锁，通过`lock.release()`释放；acquire :获得。
+- 信号量:
+  - 通过`sp = threading.Semaphore(N)`创建;
+  - 通过`lock.acquire()`获取，通过`lock.release()`释放；超过数量获取会阻塞; 默认初始值为1, 当`release`后, 现有值加一, 允许超过初始值;
+  - 相关联: `BoundedSemaphore()`, 大致同`Semaphore`, 区别`release`不允许超过初始值; 否则会抛出`ValueError`异常;
+
+#### 2.Thread.run() 和 Thread.start()
+
+- `start()`: 启动线程的唯一方式; 每个线程只能启动一次, 其中会检查相应的标志位, 满足后会调用`_thread.start_new_thread`创建线程, 并传入`_bootstrap()`, 初始化相应标志和环境并调用 `Thread.run()`;
+- `run()`: 默认会调用传入的`target`参数指定的方法, 创建`Thread`子类可以重写该方法; 
+- !!! ==注意启动线程唯一方式 `start()`==
 
 ## 9.编码方式
 
