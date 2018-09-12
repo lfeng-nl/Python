@@ -227,9 +227,7 @@
 
     - `iter(iterable)`：将可迭代对象转变为迭代器，内部就是调用`__iter__() `完成的；
 
-        ![可迭代对象](http://img.blog.csdn.net/20170516000644044?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvamluaXhpbg==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/Center)
-
-    -   ​
+    - ​
 
 - 迭代器 
 
@@ -553,10 +551,10 @@
   Month = Enum('Month', ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'))
   Month.Jan.value 
   >> 1
-  
+
   # 还可以精确的控制枚举类型
   from enum import Enum, unique
-  
+
   @unique     #帮助检查保证没有重复值
   class Weekday(Enum):
       Sun = 0 # Sun的value被设定为0
@@ -577,7 +575,7 @@
   # 1.calss的名称
   # 2.继承的父类集合，（元组，所以，当只有一个时写法为‘（xxx,）’）
   # 3.calss的方法名称 和 函数绑定
-  
+
   def fn(self, name="world"):
       print('Hello, %s.'%name)
       
@@ -590,7 +588,10 @@
     - 类方法：传递给它们的第一个参数是一个类对象而不是实例；用`@classmethod`修饰；
     - 区别点：(归根是两种方法传入参数不同)1.两者都能通过实例或类调用，2.静态方法第一个参数传入类，可以在方法内调用类属性；类方法无传入函数，无法操作类属性，通常用于设置环境变量等操作；
 
-- `__new__(), __init__()`
+- `__new__(), __init__()`:
+
+    - `__new__()`: 在`__init__`之前被调用的特殊方法, 是用来创建对象并返回的方法;
+    - `__init__`: 只是用来将传入的参数初始化给对象,
 
 ###  3.运算符重载
 
@@ -689,11 +690,13 @@
 
 - ​
 
-### 2.元类
+### 2.元类   [参考](http://blog.jobbole.com/21351/)
 
-> 通常是添加实例创建时运行的逻辑,元类在类创建时运行,他们通常用来管理或扩展类的钩子,而不是管理其实例，
+> 元类就是用来创建类的“东西”, 像类是用来创建实例一样, 元类就是用来创建类的.例如`type`就是一个内建的元类,
 >
-> metaclass 允许创建类或者修改类，可以把类看成metaclass创建出来的实例；
+> 元类本身: 1.拦截类的创建, 2. 修改类, 3.返回修改之后的类;
+>
+> 主要用途: 创建API, 例如 Django的ORM, 
 >
 > `__new__(cls, name, bases, attrs, **kwargs)`方法接收到的参数依次是：
 >
@@ -702,12 +705,23 @@
 > 3. 类继承的父类集合；
 > 4. 类的属性和方法集合（不包括继承的）。
 
+- 例: 元类的创建
+
+
 - ```python
-  class ListMetaclass(type):  --> 从type类型派生；
+  # 元类一般以Metaclass结尾,表明是一个元类, 元类是创建类,必须从type类型派生；
+  class ListMetaclass(type): 
+      # 重写 __new__ 方法;
+      def __new__(cls, name, bases, attrs):
+          attrs['add'] = lambda self, value: self.append(value)
+          return type.__new__(cls, name, bases, attrs)
       
    # 传入metaclass时，Python解释器在创建Mylist时，要通过ListMetaclass.__new__()来创建
   class Mylist(list, metaclass=ListMetaclass):
       pass
+  # 或者(python3中取消了)
+  class Mylist(list):
+      __metaclass__ = ListMetaclass
   ```
 
 - `__class__`：一个实例所属的类；普通对象就是所属的类，普通类就是`type`或`元类`；
