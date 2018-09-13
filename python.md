@@ -505,10 +505,21 @@
 
   - 当成员函数的第一个参数不是`self `时，则这个成员函数属于类而不属于事例对象；
 
-
 ### 2.高级编程
 
-- `__getattr__`：当属性查询不到时会被`__getattr__`捕获，通常需要返回一个值或抛出`AttributeError`异常；
+>  类属性查找策略:
+>
+> 1.如果attr是一个Python自动产生的属性，找到！(优先级非常高！)
+>
+> 2.查找`obj.__class__.__dict__`，如果attr存在并且是data descriptor，返回data descriptor的`__get__`方法的结果，如果没有继续在`obj.__class__`的父类以及祖先类中寻找data descriptor
+>
+> 3.在`obj.__dict__`中查找，这一步分两种情况，第一种情况是obj是一个普通实例，找到就直接返回，找不到进行下一步。第二种情况是obj是一个类，依次在obj和它的父类、祖先类的`__dict__`中查找，如果找到一个descriptor就返回descriptor的`__get__`方法的结果，否则直接返回attr。如果没有找到，进行下一步。
+>
+> 4.在`obj.__class__.__dict__`中查找，如果找到了一个descriptor(插一句：这里的descriptor一定是non-data descriptor，如果它是data descriptor，第二步就找到它了)descriptor的`__get__`方法的结果。如果找到一个普通属性，直接返回属性值。如果没找到，进行下一步。
+>
+> 5.很不幸，Python终于受不了。在这一步，它raise AttributeError
+
+- `__getattr__`：正常情况下, 当我们调用类的方法或属性时,如果不存在,就会报错, `__getattr__`可以实现当属性查询不到时会被`__getattr__`捕获，通常需要返回一个值或抛出`AttributeError`异常；
 
 - 创建类的示例后，可以给 ==实例==绑定任何属性和方法，绑定的属性和方法只跟这个实例对象有关，跟类和其他实例无关；
 
@@ -527,6 +538,23 @@
             # 只允许存在名为name、age的属性或方法
             __slots__ = ('name', 'age')
             pass
+        ```
+
+- 描述器Descriptor:
+
+    - 包含`__get__(self, instance, owner), __set__, __delete__`的类的实例;
+
+    - 一个属性的访问通过描述器的`__get__, __set__`等实现;
+
+    - 也常会用`@property`属性化用法;
+
+        ```python
+        class P():
+            def __get__():
+                pass
+            
+         class T():
+            a = P()
         ```
 
 - 直接定义的属性无法做到数据类型，数据范围等的限制，一般需要依靠`get(), set()`函数的帮助；
@@ -587,11 +615,18 @@
 
 - 静态方法和类方法
 
-    - 静态方法：嵌套在一个类中，没有self参数的简单函数，并且旨在操作类属性而不是实例属性；用`@staticmethod`修饰；
-    - 类方法：传递给它们的第一个参数是一个类对象而不是实例；用`@classmethod`修饰；
+    - 静态方法：嵌套在一个类中，用`@staticmethod`修饰, 没有`self`和`cls`参数, 几乎相当于普通函数, 只是与该类有关联; 
+    - 类方法：相比于普通方法, 传递给它们的第一个参数是一个类对象而不是实例`cls`, 因此可以在方法中调用类相关的属性和方法；用`@classmethod`修饰, 可以通过类和实例调用；`@classonlymethod`: 只能通过类调用, 调用时会判断实例参数`instance`是否为`None`, 是则抛出异常;
     - 区别点：(归根是两种方法传入参数不同)1.两者都能通过实例或类调用，2.静态方法第一个参数传入类，可以在方法内调用类属性；类方法无传入函数，无法操作类属性，通常用于设置环境变量等操作；
 
-- `__new__(), __init__()`
+- `__new__(), __init__()`区别:
+
+- `__get__, __getattr__, __getattribute__, __getitem__`: 
+
+    - `__getitem__`: 实现类似`obj['key']`的调用;
+    - `__getattr__`: 实现当属性查询失败时, 自动处理;
+    - `__getattribute__`: 无条件实现属性调用, 所有属性调用入口. 用`object.__getattribute__`避免循环调用; 
+    - `__get__`: 
 
 ###  3.运算符重载
 
