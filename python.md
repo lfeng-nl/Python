@@ -685,8 +685,6 @@
 
 - 关于`super()`, 可参考 [super](https://rhettinger.wordpress.com/2011/05/26/super-considered-super/), 
 
-
-
 ## 7.装饰器和元类
 
 ### 1.装饰器
@@ -751,10 +749,10 @@
 >
 > `__new__(cls, name, bases, attrs, **kwargs)`方法接收到的参数依次是：
 >
-> 1. cls, 当前准备创建的类；
-> 2. name, 类的名字；
-> 3. bases, 类继承的父类集合；
-> 4. attrs, 类的属性和方法集合（不包括继承的）。
+> 1. cls, 当前元类；
+> 2. name, 要创建的类的名字；
+> 3. bases, 要创建的类继承的父类集合；
+> 4. attrs, 要创建的类的属性和方法集合（不包括继承的）。
 
 - 例: 元类的创建
 
@@ -762,13 +760,17 @@
 - ```python
   # 元类一般以Metaclass结尾,表明是一个元类, 元类是创建类,必须从type类型派生；
   class ListMetaclass(type): 
-      # 重写 __new__ 方法;
+      # 重写 __new__ 方法, 在创建类时调用(注意,是创建类的时候);
       def __new__(cls, name, bases, attrs):
           attrs['add'] = lambda self, value: self.append(value)
           return type.__new__(cls, name, bases, attrs)
       
-   # 传入metaclass时，Python解释器在创建Mylist时，要通过ListMetaclass.__new__()来创建
+  # 传入metaclass时，Python解释器在创建Mylist时，要通过 ListMetaclass.__new__()来创建
   class Mylist(list, metaclass=ListMetaclass):
+      pass
+  # 或者使用装饰器
+  @six.add_metaclass(ListMetaclass)
+  class Mylist(object):
       pass
   # 或者(python3中取消了)
   class Mylist(list):
@@ -1044,7 +1046,7 @@ if __name__=='__main__':
 | -------- | ------------------------- | ------ | ------------------------------- |
 | `\d`     | 匹配一个数字              | `\D`   | 匹配一个非数字                  |
 | `\s`     | 匹配空白字符              | `\S`   | 匹配非空白字符                  |
-| `\w`     | n个字符                   | `\W`   | n-m个字符                       |
+| `\w`     | 字母数字字符             | `\W`   | n-m个字符                       |
 | `*`      | 匹配前一个字符0次或无限次 | `+`  | 匹配前一个字符1次或无限次 |
 | `?`      | 匹配前一个字符0次或1次 | `{m}/{m,n}` | 匹配前一个字符m次或m到n次 |
 | `[...]` | 匹配字符集中的任何一个字符 | `.` | 匹配任意字符（除了\n） |
@@ -1129,4 +1131,4 @@ if __name__=='__main__':
 
 ## III.实用函数
 
-- `callable()`: 判断一个对象是否为可调用的, 是返回True, 
+- `callable()`: 判断一个对象是否为可调用的, 是返回True,
