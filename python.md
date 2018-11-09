@@ -1138,6 +1138,10 @@ if __name__=='__main__':
   data = json.loads(request.body.decode('utf-8'))
   ```
 
+### 6.log
+
+
+
 ## II.技巧
 
 - `locals() ` ：返回一个字典，包含了函数执行到该时间点时所有定义的一切变量，字典形似为，变量名称和值对应；在Django模版导入上下文时可能有用；(会比较大)
