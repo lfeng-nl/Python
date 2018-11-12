@@ -125,7 +125,7 @@
 ### 2.定义函数
 - 在Python中定义函数，可以用==必选参数、默认参数、可变参数、关键字参数和命名关键字参数==这5种参数都可以组合使用。但是请注意，参数定义的顺序必须是：必选参数、默认参数、可变参数、命名关键字参数和关键字参数；例如：
    ```python
-    def f2(a, b, c=0, *, d, **kw):
+    def f(a, b, c=0, *d, **kw):
    ```
 
 - 可变参数：`*param`：
@@ -158,7 +158,7 @@
       def test(**kw):
           print(kw)
        
-      test(p1=1, p2=2)			# 输出：{‘test1’:1， ‘test2':2}
+      test(p1=1, p2=2)			# 输出：{'test1':1， 'test2':2}
       >>> {'p1:1, p2:2'}
       ```
 
@@ -211,13 +211,48 @@
 
 ### 3.生成器
 
-生成器`generator`：通过边循环边计算生成数据，
+> 生成器`generator`：通过边循环边计算生成数据，
+>
+> yield: 目前我的理解: 生成一个数据(作为生成器的基本功能), 然后接收send发送过来的数据, 作为整个表达式的值;
+>
+> 这也是为什么生成器需要先调用next() 或send(None), 因为首次进入, yield先生成一个数据, 而并没有接收传递的值;
 
--   1.使用生成器表达式：将列表生成式的`[]`换为`()`，如`a = (i for i in range(10))` a就是一个生成器；
--   2.使用`yield `： 
--   可以通过`for`循环或`next()`取出生成器中的数据；
+- 1.使用生成器表达式：将列表生成式的`[]`换为`()`，如`a = (i for i in range(10))` a就是一个生成器；
 
-### 4.迭代器
+- 2.使用`yield `： 
+
+  ```python
+  def test(max):
+     	a=0
+      while a < max:
+          yield a
+          a = a + 1
+  ```
+
+- 可以通过`for`循环或`next()`取出生成器中的数据；
+
+- 生成器的send方法`generator.send(value)` [参考](https://stackoverflow.com/questions/19302530/python-generator-send-function-purpose) :
+
+  - ```python
+    >>> def double_inputs():
+    ...     while True:
+    ...         x = yield
+    ...         yield x * 2  
+    ...
+    >>> gen = double_inputs()
+    >>> gen.send(None)       # 启动生成器
+    >>> gen.send(10)    # 跳转到 x = yield的赋值, x 接收到 参数 10, yield x * 2 --> 生成20,
+    20
+    >>> next(gen)       # 跳到第一个yield, 生成空
+    >>> gen.send(6)     #  跳转到 x = yield的赋值, x 接收到 参数 6
+    12
+    ```
+
+### 4.协程
+
+- 协程就是利用生成器的send接收参数,  从而实现两个函数在一个线程中交替执行的过程. 
+
+### 5.迭代器
 
 - 可迭代对象
 
@@ -253,7 +288,7 @@
     - `iter()`返回的迭代器-->`__iter__()`;
     - 循环调用`next()`;
 
-### 5.其他
+### 6.其他
 
 -   特殊赋值:`a,b=b,a+b `，交换`a,b `的值； 
 -   切片：`[start_index : end_index : step] `
