@@ -6,14 +6,26 @@
   - 是一个存储在MySQL服务器上的数据库查询, 不是一条SELECT语句, 而是被该语句检索出来的结果集. 存储了游标之后, 应用程序可以根据需求滚动或浏览其中的数据;
   - 游标实际上是一种从包括多条数据记录的结果集中每次提取一条记录的机制。 
   - 游标是系统为用户开设的一个数据缓冲区，存放SQL语句的执行结果 
-
 - 存储过程:  为以后使用而保存的一条或多条Mysql语句的集合.
+
+### 2.使用过程
+
+```python
+db = pymysql.connect(xxx)
+cursor = db.cursor()
+cursor.execute('select xxx')
+data = cursor.fetchall()
+cursor.execute('updata')
+db.commit()
+cursor.close()
+db.close()
+```
 
 ## 2.collections
 
 ### 1.namedtuple
 
-> 通过namedtuple工厂类创建一个类, 给每个index增加了.属性取值的方式;
+> 通过namedtuple工厂类创建一个类, 给元组的每个元素增加了`.属性` 取值的方式;
 
 ```python
 Point = namedtuple('Point', ['x', 'y'])
@@ -26,6 +38,12 @@ x, y = p0
 ### 2.defaultdict
 
 > 传入一个可调用对象; 取值时如果key不存在则调用传入的可调用对象进行赋值并返回;  有点类似dict对象的 `setdefault`的功能;
+
+###  3.deque 双端队列
+
+### 4.ChainMap 
+
+> 将多个可迭代对象整合到一起形成一个新的可迭代对象, 重复的项或key仅保留首个;
 
 ## 3.threading
 
@@ -46,4 +64,37 @@ x, y = p0
 >
 >    所以, I/O密集型的Python程序要比计算密集型的代码能更好的利用多线程环境;
 
-- 
+## 4.itertools
+
+### 1.chain()
+
+- 将可迭代对象串联,形成一个更大的迭代器;
+
+## 5.contextlib 
+
+> python资源管理: 
+>
+> 1.`try...finally...`, 使用完毕关闭资源;
+>
+> 2.`with...: pass` : 底层通过`__enter__(), __exit__()`方法实现;
+
+- `@contextmanager`: 装饰一个生成器, `yield`前的代码在`with`调用的时候执行, `yield` 的值作为 `with`接收到的数据, `yield`后的数据在`with`块执行完毕时执行;
+
+  - ```python
+    @contextmanager
+    def tag(name):
+        print('<%s>' % name)
+        yield 'hello world'
+        print('</%s>' % name)
+    
+    with tag('h1') ad f:
+        print(f) 
+    # >>> <h1>
+    # >>> hello
+    # >>> </h1>
+    ```
+
+- `closing()`: 查看源码
+
+
+
