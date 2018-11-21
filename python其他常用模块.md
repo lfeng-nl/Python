@@ -37,7 +37,9 @@ x, y = p0
 
 ### 2.defaultdict
 
-> 传入一个可调用对象; 取值时如果key不存在则调用传入的可调用对象进行赋值并返回;  有点类似dict对象的 `setdefault`的功能;
+> 传入一个可调用对象; 取值时如果key不存在则==调用传入的可调用对象进行赋值并返回==;  有点类似`dict`对象的 `setdefault`的功能;
+
+- `dict = defaultdict(factory_function)`: 
 
 ###  3.deque 双端队列
 
@@ -96,5 +98,31 @@ x, y = p0
 
 - `closing()`: 查看源码
 
+## 6.SQLAlchemy
 
+> ORM: Object Relational Mapping, 对象关系映射, 把关系数据库的表结构映射到对象上;
+>
+> SQLAlchemy 是知名的ORM工具之一
 
+- 连接
+  - `engine = create_engine('mysql://root:passwd@localhost:3306/test')` 
+  - 参数结构`dialect[+driver]://user:password@host/dbname[?key=value..]` 
+
+- 声明映射
+
+  - 使用数据库前, 需要先声明表结构对应的类;
+
+  - `Base = sqlalchemy.ext.declarative.declarative_base()`: `declarative_base`生成一个基类; 通过基类定义表对应的数据结构
+
+    - ```python
+      from sqlalchemy.ext.declarative import declarative_base
+      from sqlalchemy import String, Integer, Column
+      
+      Base = declarative_base()
+      class User(Base):
+          __tablename__ = 'user'
+          id = Column(Integer, primary_key=True)
+          name = Column(String)
+      ```
+
+    - 
