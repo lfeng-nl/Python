@@ -633,10 +633,10 @@
   Month = Enum('Month', ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'))
   Month.Jan.value 
   >> 1
-
+  
   # 还可以精确的控制枚举类型
   from enum import Enum, unique
-
+  
   @unique     #帮助检查保证没有重复值
   class Weekday(Enum):
       Sun = 0 # Sun的value被设定为0
@@ -657,7 +657,7 @@
   # 1.calss的名称
   # 2.继承的父类集合，（元组，所以，当只有一个时写法为‘（xxx,）’）
   # 3.calss的方法名称 和 函数绑定
-
+  
   def fn(self, name="world"):
       print('Hello, %s.'%name)
       
@@ -670,12 +670,17 @@
     - 类方法：相比于普通方法, 传递给它们的第一个参数是一个类对象而不是实例`cls`, 因此可以在方法中调用类相关的属性和方法；用`@classmethod`修饰, 可以通过类和实例调用；`@classonlymethod`: 只能通过类调用, 调用时会判断实例参数`instance`是否为`None`, 是则抛出异常;
     - 区别点：(归根是两种方法传入参数不同)1.两者都能通过实例或类调用，2.静态方法第一个参数传入类，可以在方法内调用类属性；类方法无传入函数，无法操作类属性，通常用于设置环境变量等操作；
 
-- `__new__(), __init__()`:
+- `__new__(), __init__()`的区别:
 
-    - `__new__()`: 在`__init__`之前被调用的特殊方法, 是用来创建对象并返回的方法;
-    - `__init__`: 只是用来将传入的参数初始化给对象,
+    - `__new__()`: 在`__init__()`之前被调用的特殊方法, 是用来==创建对象并返回==的方法; 调用顺序是, `子类的__new__()--> 父类的 __new__() --> 子类的__init__()`; 
+      - `cls`的生成: 在定义类时, 解析器会调用`type`实例`cls` ;
+      - `__new__()`方法最终会调用`object.__new__()`, 需要传入参数`cls`,也就是类(`type`的实例); 会返回一个实例, 就是`cls`实例化出的对象;
+      - 重写`__new__()`方法时不要忘记显示的调用并返回父类的`__new__()`方法;
+      - 调用`__new__()`时会将所有的实例化的参数传入; 
+    - `__init__`: 只是用来将传入的参数初始化给这个对象;
+      - `__init__()`: 也需要显示的调用父类的`__init __()`完成对父类的初始化;
 
-- `__get__, __getattr__, __getattribute__, __getitem__`: 
+-  `__get__, __getattr__, __getattribute__, __getitem__`: 
 
     - `__getitem__`: 实现类似`obj['key']`的调用;
     - `__getattr__`: 实现当属性查询失败时, 自动处理;
@@ -737,7 +742,20 @@
 ### 5.其他对象中的重要属性
 
 - `__module__`: 表示当前操作的对象所在模块, 
-- 
+- `__class__`: 对象的类(类型);
+- `__bases__`: 父类;
+
+### 6.type和object
+
+- `type.__class__ --> type, object.__class__ --> type`: 表明, `type` 和`object`都是`type`的一个实例;
+
+- `type`是一切类型的类型;
+
+- `object`是所有对象的基类, type也继承自object; 
+
+- 详细关系如下图:
+
+  ![type&object](./image/type&object.png)
 
 ## 7.装饰器和元类
 
@@ -791,7 +809,6 @@
       C = dcecorator(c)
   ```
 
-- ​
 
 ### 2.元类   [参考](http://blog.jobbole.com/21351/)
 
