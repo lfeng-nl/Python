@@ -1029,6 +1029,12 @@ if __name__=='__main__':
 - `run()`: 默认会调用传入的`target`参数指定的方法, 创建`Thread`子类可以重写该方法; 
 - !!! ==注意启动线程唯一方式 `start()`==
 
+#### 3.ThreadLocal
+
+> 在线程内部使用的全局变量, 线程内部共享, 线程之间互不干扰;
+
+- `local = threading.local()`: 全局声明, 在每个线程中使用;
+
 ## 9.编码方式
 
 ### 1.字符编码   [参看](https://www.zhihu.com/question/23374078/answer/69732605)
