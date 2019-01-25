@@ -53,21 +53,8 @@
 
 #### 7.其他
 
-- None：表示为空，一个特殊的对象，类型为Nonetype，表示数据为空，对应的布尔值为False；
+- None：表示为空，一个特殊的对象，类型为`Nonetype`，表示数据为空，对应的布尔值为False；
 
-- 命名元组：`collections.namedtuple`
-
-  - ```python
-    from collections import namedtuple
-    Point = namedtuple('Point', ['x', 'y'])
-    p = Point(1, 2)
-    p
-    >> Point(x=1, y=2)
-    p.x
-    >> 1
-    p.y
-    >> 2
-    ```
 
 
 ### 2.运算符和语句
@@ -215,7 +202,7 @@
 >
 > yield: 目前我的理解: 生成一个数据(作为生成器的基本功能), 然后接收send发送过来的数据, 作为整个表达式的值;
 >
-> 这也是为什么生成器需要先调用next() 或send(None), 因为首次进入, yield先生成一个数据, 而并没有接收传递的值;
+> 这也是为什么生成器需要先调用`next()` 或`send(None)`, 因为首次进入, yield先生成一个数据, 而并没有接收传递的值;
 
 - 1.使用生成器表达式：将列表生成式的`[]`换为`()`，如`a = (i for i in range(10))` a就是一个生成器；
 
@@ -244,7 +231,7 @@
     >>> gen.send(10)    # 跳转到 x = yield的赋值, x 接收到 参数 10, yield x * 2 --> 生成20,
     20
     >>> next(gen)       # 跳到第一个yield, 生成空
-    >>> gen.send(6)     #  跳转到 x = yield的赋值, x 接收到 参数 6
+    >>> gen.send(6)     #  跳转到 x = yield 的赋值, x 接收到 参数 6
     12
     ```
 
@@ -997,6 +984,11 @@ if __name__=='__main__':
 - `start()`: 启动线程的唯一方式; 每个线程只能启动一次, 其中会检查相应的标志位, 满足后会调用`_thread.start_new_thread`创建线程, 并传入`_bootstrap()`, 初始化相应标志和环境并调用 `Thread.run()`;
 - `run()`: 默认会调用传入的`target`参数指定的方法, 创建`Thread`子类可以重写该方法; 
 - !!! ==注意启动线程唯一方式 `start()`==
+
+### 3.local()
+
+- 很多时候线程需要有自己的私有数据, 但是, 使用局部变量又带来使用上的不方便, 所以引入`threading.local()`;
+- 全局声明, 但是每个线程都会有自己的实例,互不影响;
 
 ## 9.编码方式
 
