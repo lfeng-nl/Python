@@ -16,6 +16,7 @@
 - `r_s = s[::-1]`：逆序；
 - `s.replace('pa', 'xxx')`：替换；
 - `s.endswith('span')`：判断结束字符；
+- `s.startswith()`: 判断开始字符; 参数可以为`tuple`, 表示为其中之一;
 - `','.join(s)`：用自身分割；
 - `s.split(',')`：用字符分割，返回列表；
 - `s * 2`：重复
@@ -211,11 +212,27 @@
 
 ### 3.生成器
 
-> 生成器`generator`：通过边循环边计算生成数据，
+> 生成器`generator`函数：返回==生成迭代器== 的函数; 
 >
-> yield: 目前我的理解: 生成一个数据(作为生成器的基本功能), 然后接收send发送过来的数据, 作为整个表达式的值;
+> 生成迭代器 generator iterator: 在每个yield处暂停处理, 并记忆相关信息;
+>
+> [yield 表达式](https://docs.python.org/3.7/reference/expressions.html#yieldexpr):  用于定义生成器函数或asynchronous generator 函数, 因此, yield表达式仅可以用于函数体内;
+>
+> 目前我的理解: 生成一个数据(作为生成器的基本功能), 然后接收send发送过来的数据, 作为整个表达式的值;
 >
 > 这也是为什么生成器需要先调用next() 或send(None), 因为首次进入, yield先生成一个数据, 而并没有接收传递的值;
+
+- yield表达式:
+
+  - ```python
+    def gen():  # defines a generator function
+        yield 123
+    
+    async def agen(): # defines an asynchronous generator function
+        yield 123
+    ```
+
+  - 
 
 - 1.使用生成器表达式：将列表生成式的`[]`换为`()`，如`a = (i for i in range(10))` a就是一个生成器；
 
