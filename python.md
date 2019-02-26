@@ -266,7 +266,7 @@
 
     - `iter(iterable)`：将可迭代对象转变为迭代器，内部就是调用`__iter__() `完成的；
 
-    - ​
+    - 
 
 - 迭代器 
 
@@ -436,7 +436,7 @@
 ### 2.模块使用
 
 - import工作步骤：1.找到模块文件；2.编译成位码；3.执行模块代码创建其所定义的对象；
-- ​模块文件的选择：除了一般的py文件，包，还可以导入：1.编译扩展模块（c,c++编写的)，使用动态连接，如`.so, .dll, .pyd`； 2.c编写的编译好的内置模块，并通过静态链接至python； 3.zip文件组件，导入时会自动解压缩；等等；
+- 模块文件的选择：除了一般的py文件，包，还可以导入：1.编译扩展模块（c,c++编写的)，使用动态连接，如`.so, .dll, .pyd`； 2.c编写的编译好的内置模块，并通过静态链接至python； 3.zip文件组件，导入时会自动解压缩；等等；
 - `import, from`：是可执行语句，类似`def`，都是隐性赋值语句，所以，只有在对应的import语句执行后，才可使用；
 - 命名空间：模块就是命名空间，存在于模块之内的变量名就是模块对象的属性；
   - 模块语句会在首次导入时执行；
@@ -733,42 +733,42 @@
 
 ### 1.装饰器
 
-> 装饰器提供了 一种方法，在函数和类定义语句末尾插入自动运行代码，（def和class语句后），
->
 > 装饰器自身是一个返回可调用对象的可调用对象；
 
 #### 1.函数装饰器
 
-> 函数装饰器语法关键在于，@decorator ---> 相当于 func = decorator(func);
+> 函数装饰器语法关键在于，@decorator ---> 相当于 `func = decorator(func)`;
 >
-> 也就是被装饰函数==装饰器内部的包装函数，包装函数执行额外代码后再调用原有被装饰函数；
+> 也就是被装饰函数=装饰器内部的包装函数，包装函数执行额外代码后再调用原有被装饰函数；
 
 - ```python
   def decorator(F):
       return F
   
   @decorator
-  def func(): ...
+  def func(): 
+      ...
+  # 相当于 func = decorator(func)
   ```
 
-- ```python
-  import functools
-  # log()返回一个内部函数；
-  def log(func)：
-  	# 修改函数名为func, func.__name__ == func
-  	@functools.wraps(func)
-      def wrapper(*args, **kw):
-          print('call %s'%func.__name)  # --> 添加的内容
-          return func(*args, **kw)
-      return wrapper
-  # 需要借助python的@语法
-  @log
-  def now():
-      pass
-  # @log 放到函数定义处，相当于执行了，now=log(now),
-  ```
+- 装饰函数编写:
 
-- ​
+  - ```python
+    import functools
+    # log()返回一个内部函数；
+    def log(func)：
+    	# 修改函数名为func, func.__name__ == func
+    	@functools.wraps(func)
+        def wrapper(*args, **kw):
+            print('call %s'%func.__name)  # --> 包装函数添加的内容
+            return func(*args, **kw)
+        return wrapper
+    # 需要借助python的@语法
+    @log
+    def now():
+        pass
+    # @log 放到函数定义处，相当于执行了，now=log(now),
+    ```
 
 #### 2.类装饰器
 
@@ -781,7 +781,26 @@
       C = dcecorator(c)
   ```
 
-- ​
+- 可以用装饰器实现扩展类的功能
+
+  - ```python
+    def log_getattribute(cls):
+        orig_getattribute = cls.__getattribute__
+        
+        def new_getattribute(self, name):
+            print('getting: ', name)
+            return orig_getattribute(self,name)
+        cls.__getattribute__ = new_getattribute
+        return cls
+    
+    @log_getattribute
+    class A:
+        def __init__(self, x):
+            self.x = x
+            
+    ```
+
+  - 
 
 ### 2.元类   [参考](http://blog.jobbole.com/21351/)
 
@@ -833,7 +852,7 @@
     attribut = property(fget, fset, fdel, doc),
     ```
 
-  - ​
+  - 
 
 ## 7.异常、调试和测试
 
