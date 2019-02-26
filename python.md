@@ -252,9 +252,40 @@
     12
     ```
 
+### 4.yield表达式
+
+> 用于定义`generator`或`asynchronous generator`, 用在函数定义体内, 表示该函数为`generator`, 用在`async def`函数体内表示使协程成为异步生成器(asynchronous generator)
+
+```python
+def gen():
+    yield 123
+    
+async def agen():
+    yield 123
+```
+
+
+
 ### 4.协程
 
+- `coroutine`协程: 一种更通用的子程序, 子程序在一个点进入一个点退出, 协程可以在多个点进入,退出和恢复, 可以使用`async def`实现;
+- `asynchronous generator`: 一个返回`asynchronous generator iterator`的函数; 用`async def`定义, 函数体内有`yield`表达式,  也就是`asynchronous generator function`; 可以包含 `await`表达式, `async for, async with`语句
+- `asynchronous generator iterator`: `asynchronous generator`函数返回, 是一个`asynchronous iterator`, 当使用`__anext__()`方法调用时, 返回一个`awaitable`对象, 该对对象将执行`asynchronous generator`函数体直到下一个`yield`表达式;
+- `awaitable`: 可以在`await`表达式中使用的对象, 可以是一个协程或具有`__await__()`方法的对象;
+- `await`表达式: 暂停一个`awaitable`对象, 只能在协程函数中使用;
+
+- `asynchronous iterable`: 可以在`anync for`语句中使用, `__aiter__()`方法必须返回一个`asynchronous iterator`; 
+- `asynchronous iterator`: 包含`__aiter__(), __anext__()`方法的对象, `__anext__`返回一个`awaitable`对象, `async for`调用`asynchronous iterator`的`__anext__()`方法;
+
+
+
+Coroutines is a more generalized form of subroutines. Subroutines are entered at one point and exited at another point. Coroutines can be entered, exited, and resumed at many different points. They can be implemented with the [`async def`](https://docs.python.org/3.7/reference/compound_stmts.html#async-def) statement.
+
 - 协程就是利用生成器的send接收参数,  从而实现两个函数在一个线程中交替执行的过程. 
+
+### 5.Asynchronous generator
+
+
 
 ### 5.迭代器
 
