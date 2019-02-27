@@ -248,10 +248,42 @@
     12
     ```
 
+### 4.yield表达式
+
+> 用于定义`generator`或`asynchronous generator`, 用在函数定义体内, 表示该函数为`generator`, 用在`async def`函数体内表示使协程成为异步生成器(asynchronous generator)
+
+```python
+def gen():
+    yield 123
+    
+async def agen():
+    yield 123
+```
+
+
+
 ### 4.协程
 
 - 协程就是利用生成器, 实现两个函数在一个线程中交替执行的过程. 由用户去切换执行过程(类似线程), 方便实现异步(避免复杂回调方式)
 - 利用`async def`定义协程函数, 函数体内使用 `await, async` 
+- `coroutine`协程: 一种更通用的子程序, 子程序在一个点进入一个点退出, 协程可以在多个点进入,退出和恢复, 可以使用`async def`实现;
+- `asynchronous generator`: 一个返回`asynchronous generator iterator`的函数; 用`async def`定义, 函数体内有`yield`表达式,  也就是`asynchronous generator function`; 可以包含 `await`表达式, `async for, async with`语句
+- `asynchronous generator iterator`: `asynchronous generator`函数返回, 是一个`asynchronous iterator`, 当使用`__anext__()`方法调用时, 返回一个`awaitable`对象, 该对对象将执行`asynchronous generator`函数体直到下一个`yield`表达式;
+- `awaitable`: 可以在`await`表达式中使用的对象, 可以是一个协程或具有`__await__()`方法的对象;
+- `await`表达式: 暂停一个`awaitable`对象, 只能在协程函数中使用;
+
+- `asynchronous iterable`: 可以在`anync for`语句中使用, `__aiter__()`方法必须返回一个`asynchronous iterator`; 
+- `asynchronous iterator`: 包含`__aiter__(), __anext__()`方法的对象, `__anext__`返回一个`awaitable`对象, `async for`调用`asynchronous iterator`的`__anext__()`方法;
+
+
+
+Coroutines is a more generalized form of subroutines. Subroutines are entered at one point and exited at another point. Coroutines can be entered, exited, and resumed at many different points. They can be implemented with the [`async def`](https://docs.python.org/3.7/reference/compound_stmts.html#async-def) statement.
+
+- 协程就是利用生成器的send接收参数,  从而实现两个函数在一个线程中交替执行的过程. 
+
+### 5.Asynchronous generator
+
+
 
 ### 5.迭代器
 
@@ -263,7 +295,7 @@
 
     - `iter(iterable)`：将可迭代对象转变为迭代器，内部就是调用`__iter__() `完成的；
 
-    - ​
+    - 
 
 - 迭代器 
 
@@ -433,7 +465,7 @@
 ### 2.模块使用
 
 - import工作步骤：1.找到模块文件；2.编译成位码；3.执行模块代码创建其所定义的对象；
-- ​模块文件的选择：除了一般的py文件，包，还可以导入：1.编译扩展模块（c,c++编写的)，使用动态连接，如`.so, .dll, .pyd`； 2.c编写的编译好的内置模块，并通过静态链接至python； 3.zip文件组件，导入时会自动解压缩；等等；
+- 模块文件的选择：除了一般的py文件，包，还可以导入：1.编译扩展模块（c,c++编写的)，使用动态连接，如`.so, .dll, .pyd`； 2.c编写的编译好的内置模块，并通过静态链接至python； 3.zip文件组件，导入时会自动解压缩；等等；
 - `import, from`：是可执行语句，类似`def`，都是隐性赋值语句，所以，只有在对应的import语句执行后，才可使用；
 - 命名空间：模块就是命名空间，存在于模块之内的变量名就是模块对象的属性；
   - 模块语句会在首次导入时执行；
@@ -730,42 +762,42 @@
 
 ### 1.装饰器
 
-> 装饰器提供了 一种方法，在函数和类定义语句末尾插入自动运行代码，（def和class语句后），
->
 > 装饰器自身是一个返回可调用对象的可调用对象；
 
 #### 1.函数装饰器
 
-> 函数装饰器语法关键在于，@decorator ---> 相当于 func = decorator(func);
+> 函数装饰器语法关键在于，@decorator ---> 相当于 `func = decorator(func)`;
 >
-> 也就是被装饰函数==装饰器内部的包装函数，包装函数执行额外代码后再调用原有被装饰函数；
+> 也就是被装饰函数=装饰器内部的包装函数，包装函数执行额外代码后再调用原有被装饰函数；
 
 - ```python
   def decorator(F):
       return F
   
   @decorator
-  def func(): ...
+  def func(): 
+      ...
+  # 相当于 func = decorator(func)
   ```
 
-- ```python
-  import functools
-  # log()返回一个内部函数；
-  def log(func)：
-  	# 修改函数名为func, func.__name__ == func
-  	@functools.wraps(func)
-      def wrapper(*args, **kw):
-          print('call %s'%func.__name)  # --> 添加的内容
-          return func(*args, **kw)
-      return wrapper
-  # 需要借助python的@语法
-  @log
-  def now():
-      pass
-  # @log 放到函数定义处，相当于执行了，now=log(now),
-  ```
+- 装饰函数编写:
 
-- ​
+  - ```python
+    import functools
+    # log()返回一个内部函数；
+    def log(func)：
+    	# 修改函数名为func, func.__name__ == func
+    	@functools.wraps(func)
+        def wrapper(*args, **kw):
+            print('call %s'%func.__name)  # --> 包装函数添加的内容
+            return func(*args, **kw)
+        return wrapper
+    # 需要借助python的@语法
+    @log
+    def now():
+        pass
+    # @log 放到函数定义处，相当于执行了，now=log(now),
+    ```
 
 #### 2.类装饰器
 
@@ -778,7 +810,26 @@
       C = dcecorator(c)
   ```
 
-- ​
+- 可以用装饰器实现扩展类的功能
+
+  - ```python
+    def log_getattribute(cls):
+        orig_getattribute = cls.__getattribute__
+        
+        def new_getattribute(self, name):
+            print('getting: ', name)
+            return orig_getattribute(self,name)
+        cls.__getattribute__ = new_getattribute
+        return cls
+    
+    @log_getattribute
+    class A:
+        def __init__(self, x):
+            self.x = x
+            
+    ```
+
+  - 
 
 ### 2.元类   [参考](http://blog.jobbole.com/21351/)
 
@@ -830,7 +881,7 @@
     attribut = property(fget, fset, fdel, doc),
     ```
 
-  - ​
+  - 
 
 ## 7.异常、调试和测试
 
