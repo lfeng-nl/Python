@@ -199,15 +199,25 @@
 
 ### 3.生成器
 
-> 生成器`generator`函数：返回==生成迭代器== 的函数; 
+> 在`yield`表达式处暂停并返回数据,暂存函数内部数据和栈信息, 当再次使用`next或send`时继续执行;
 >
-> 生成迭代器 generator iterator: 在每个yield处暂停处理, 并记忆相关信息;
+> `send`: 发送一个参数到generator, 该参数作物`yield`表达式的值,并返回下一个值;
 >
-> [yield 表达式](https://docs.python.org/3.7/reference/expressions.html#yieldexpr):  用于定义生成器函数或asynchronous generator 函数, 因此, yield表达式仅可以用于函数体内;
->
-> 目前我的理解: 生成一个数据(作为生成器的基本功能), 然后接收send发送过来的数据, 作为整个表达式的值;
->
-> 这也是为什么生成器需要先调用`next()` 或`send(None)`, 因为首次进入, yield先生成一个数据, 而并没有接收传递的值;
+> [参考](https://docs.python.org/3.7/reference/expressions.html#yieldexpr)
+
+- 创造生成器的方式:
+
+  - 1.使用生成器表达式：将列表生成式的`[]`换为`()`，如`a = (i for i in range(10))` a就是一个生成器；
+
+  - 2.使用`yield `： 
+
+    ```python
+    def test(max):
+       	a=0
+        while a < max:
+            yield a
+            a = a + 1
+    ```
 
 - yield表达式:
 
@@ -218,20 +228,6 @@
     async def agen(): # defines an asynchronous generator function
         yield 123
     ```
-
-  - 
-
-- 1.使用生成器表达式：将列表生成式的`[]`换为`()`，如`a = (i for i in range(10))` a就是一个生成器；
-
-- 2.使用`yield `： 
-
-  ```python
-  def test(max):
-     	a=0
-      while a < max:
-          yield a
-          a = a + 1
-  ```
 
 - 可以通过`for`循环或`next()`取出生成器中的数据；
 
@@ -244,8 +240,8 @@
     ...         yield x * 2  
     ...
     >>> gen = double_inputs()
-    >>> gen.send(None)       # 启动生成器
-    >>> gen.send(10)    # 跳转到 x = yield的赋值, x 接收到 参数 10, yield x * 2 --> 生成20,
+    >>> gen.send(None)  # 启动生成器, 只能使用next()或send(None)启动生成器, 生成器执行到yield处, 生成数据;
+    >>> gen.send(10)    # 跳转到生成器, x 接收到 参数 10, yield x * 2 --> 生成20,
     20
     >>> next(gen)       # 跳到第一个yield, 生成空
     >>> gen.send(6)     #  跳转到 x = yield 的赋值, x 接收到 参数 6
@@ -254,7 +250,8 @@
 
 ### 4.协程
 
-- 协程就是利用生成器的send接收参数,  从而实现两个函数在一个线程中交替执行的过程. 
+- 协程就是利用生成器, 实现两个函数在一个线程中交替执行的过程. 由用户去切换执行过程(类似线程), 方便实现异步(避免复杂回调方式)
+- 利用`async def`定义协程函数, 函数体内使用 `await, async` 
 
 ### 5.迭代器
 
