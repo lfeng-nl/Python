@@ -179,14 +179,7 @@
 
 ## 3.高级特定
 
-### 1.序列
-
-序列的两个主要特点是==索引操作符==和==切片操作符==，索引可以从一个序列中抓出一个特定项目；切片操作可以获取序列的一个切片，即一部分序列；
-
--   `range() `：返回一个==整数== 序列。
--   `reversed() `：返回给定序列的反向迭代器；
-
-### 2.列表生成式
+### 1.列表生成式
 
 -   `list(iterable)`函数，可以把一个可迭代对象转换为列表；
 
@@ -197,7 +190,7 @@
         [random.choice(range(10)) for _ in range(9)]    #后面的for循环仅表示循环多少次。_ 常用于表示临时变量
         ```
 
-### 3.生成器
+### 2.生成器
 
 > 在`yield`表达式处暂停并返回数据,暂存函数内部数据和栈信息, 当再次使用`next或send`时继续执行;
 >
@@ -207,7 +200,7 @@
 
 - 创造生成器的方式:
 
-  - 1.使用生成器表达式：将列表生成式的`[]`换为`()`，如`a = (i for i in range(10))` a就是一个生成器；
+  - 1.使用列表生成器：将列表生成式的`[]`换为`()`，如`a = (i for i in range(10))` a就是一个生成器；
 
   - 2.使用`yield `： 
 
@@ -219,38 +212,16 @@
             a = a + 1
     ```
 
-- yield表达式:
-
-  - ```python
-    def gen():  # defines a generator function
-        yield 123
-    
-    async def agen(): # defines an asynchronous generator function
-        yield 123
-    ```
-
-- 可以通过`for`循环或`next()`取出生成器中的数据；
-
-- 生成器的send方法`generator.send(value)` [参考](https://stackoverflow.com/questions/19302530/python-generator-send-function-purpose) :
-
-  - ```python
-    >>> def double_inputs():
-    ...     while True:
-    ...         x = yield
-    ...         yield x * 2  
-    ...
-    >>> gen = double_inputs()
-    >>> gen.send(None)  # 启动生成器, 只能使用next()或send(None)启动生成器, 生成器执行到yield处, 生成数据;
-    >>> gen.send(10)    # 跳转到生成器, x 接收到 参数 10, yield x * 2 --> 生成20,
-    20
-    >>> next(gen)       # 跳到第一个yield, 生成空
-    >>> gen.send(6)     #  跳转到 x = yield 的赋值, x 接收到 参数 6
-    12
-    ```
+- 可以通过`for`循环或`next()`取出生成器中的数据, 每次取一个值, 最终抛出`StopIteration`的异常;4.yield表达式
 
 ### 4.yield表达式
 
 > 用于定义`generator`或`asynchronous generator`, 用在函数定义体内, 表示该函数为`generator`, 用在`async def`函数体内表示使协程成为异步生成器(asynchronous generator)
+
+- 生成器的send方法`generator.send(value)` [参考](https://stackoverflow.com/questions/19302530/python-generator-send-function-purpose) :
+
+
+
 
 ```python
 def gen():
@@ -264,8 +235,86 @@ async def agen():
 
 ### 4.协程
 
+- 对生成器的扩展:
+
+    - `send()`方法:
+
+        ```python
+        >>> def double_inputs():
+        >>>		x = yield 12
+        >>>		y = yield x * 2  
+        ...
+        >>> gen = double_inputs()
+        >>> gen.send(None)  # 启动生成器, 只能使用next()或send(None)启动生成器, 生成器执行到yield处, 生成数据返回, 并暂停执行;
+        >>> gen.send(10)    # 跳转到暂停处, 将10传递给x, x=10, 然后运行到下一个yield处,
+        20
+        
+        ```
+
+    - `close()`方法: 关闭生成器, 后续调用会抛出`StopIteration`的异常;
+
+    - `throw()`方法: 在生成器的暂停点抛出指定异常, 如果生成器捕获, 则`throw`相当于`send()或next()`, 如果未捕获,则抛到调用处;
+
+- `yield from <expr>`: 其中<expr>是一个计算迭代的表达式，从中提取迭代器;
+
+- `yield from` :跟生成器(也是一个迭代器)时:
+
+    - 含有yield from 的生成器被成为委托生成器;
+
+    - 迭代器产生的值直接返回给调用者, 调用者使用`send（）`发送到委托生成器的任何值都直接传递给迭代器。
+
+        ```python
+        # yield from 原理说明 PEP380
+        
+        _i = iter(EXPR) # 将可迭代对象转换为迭代器器
+        try:
+            _y = next(_i) 
+        except StopIteration as _e: # 捕获初始 StopIteration
+            _r = _e.value
+        else:
+            while 1:           # 循环
+                try:
+                    _s = yield _y 				# 将迭代器地一个值返回
+                except GeneratorExit as _e:		# 捕获 调用者的 close;
+                    try:
+                        _m = _i.close			# 如果迭代器为生成器,调用close;
+                    except AttributeError:
+                        pass
+                    else:
+                        _m()
+                    raise _e
+                except BaseException as _e:		# 捕获 调用着的其他异常
+                    _x = sys.exc_info()
+                    try:
+                        _m = _i.throw
+                    except AttributeError:
+                        raise _e
+                    else:
+                        try:
+                            _y = _m(*_x)
+                        except StopIteration as _e:
+                            _r = _e.value
+                            break
+                else:							
+                    try:
+                        if _s is None:			# 如果接收值None, next调用迭代器, 否则,send该值到迭代器
+                            _y = next(_i)
+                        else:
+                            _y = _i.send(_s)
+                    except StopIteration as _e: # 捕获结束异常
+                        _r = _e.value
+                        break
+        RESULT = _r
+        ```
+
+        
+
+
+
 - 协程就是利用生成器, 实现两个函数在一个线程中交替执行的过程. 由用户去切换执行过程(类似线程), 方便实现异步(避免复杂回调方式)
+
 - 利用`async def`定义协程函数, 函数体内使用 `await, async` 
+
 - `coroutine`协程: 一种更通用的子程序, 子程序在一个点进入一个点退出, 协程可以在多个点进入,退出和恢复, 可以使用`async def`实现;
 - `asynchronous generator`: 一个返回`asynchronous generator iterator`的函数; 用`async def`定义, 函数体内有`yield`表达式,  也就是`asynchronous generator function`; 可以包含 `await`表达式, `async for, async with`语句
 - `asynchronous generator iterator`: `asynchronous generator`函数返回, 是一个`asynchronous iterator`, 当使用`__anext__()`方法调用时, 返回一个`awaitable`对象, 该对对象将执行`asynchronous generator`函数体直到下一个`yield`表达式;
