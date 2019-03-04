@@ -221,8 +221,6 @@
 - 生成器的send方法`generator.send(value)` [参考](https://stackoverflow.com/questions/19302530/python-generator-send-function-purpose) :
 
 
-
-
 ```python
 def gen():
     yield 123
@@ -231,11 +229,15 @@ async def agen():
     yield 123
 ```
 
-
-
 ### 4.协程
 
-- 对生成器的扩展:
+> 对于`yield`,一方面,会产出一个值,提供给`next()`, 此外,还会作出让步, 暂停执行生成器, 让调用放继续工作, 从此角度看, 协程同生成器类似;
+>
+> 协程的底层架构在PEP  [342中定义](https://www.python.org/dev/peps/pep-0342/)
+>
+> 预激: 让协程向前执行到地一个yield表达式, 准备好作为活跃的协程使用;
+
+- `send(), throw(), close()`:
 
     - `send()`方法:
 
@@ -255,11 +257,22 @@ async def agen():
 
     - `throw()`方法: 在生成器的暂停点抛出指定异常, 如果生成器捕获, 则`throw`相当于`send()或next()`, 如果未捕获,则抛到调用处;
 
+- 异常: 当协程出现异常时, 如果协程未处理, 会向上冒泡, 并导致协程终止, 再次调用会产生`StopIteration`异常;
+
+- 终止协程
+
+    - 一般使用`send()`发送特殊值,如`None`, 另协程退出;
+    - 协程退出可以返回参数, 并抛出`StopIteration`异常; 异常对象的`value`属性保存返回值;
+
+- `yield from`: [参考](https://stackoverflow.com/questions/9708902/in-practice-what-are-the-main-uses-for-the-new-yield-from-syntax-in-python-3) 
+
+    - 引入的主要原因有: 1.可以建立子生成器和调用者的双向通道,2.更方便的返回值;
+
 - `yield from <expr>`: 其中<expr>是一个计算迭代的表达式，从中提取迭代器;
 
 - `yield from` :跟生成器(也是一个迭代器)时:
 
-    - 含有yield from 的生成器被成为委托生成器;
+    - 含有`yield from`的生成器被成为委托生成器;
 
     - 迭代器产生的值直接返回给调用者, 调用者使用`send（）`发送到委托生成器的任何值都直接传递给迭代器。
 
