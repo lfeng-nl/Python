@@ -350,7 +350,23 @@ Coroutines is a more generalized form of subroutines. Subroutines are entered at
 
 ### 5.Asynchronous generator
 
+> python3.5 引入 `async/await`语法 , 方便定义 `Asynchronous generator`
 
+- 异步生成器对象: 
+
+  - 定义:`.__aiter__()`, 返回自身;
+
+  - 定义:`.__anext__()`, 返回一个`awaitable`;
+
+  - 定义:`.asend()`, 返回一个`awaitable`, 类似`send()`;
+
+  - 定义:`.athrow()`, 返回一个`awaitable`, 类似`throw()`;
+
+  - 定义:`.aclose()`, 返回一个`awaitable`, 类似`close()`;
+
+    ![](./image/async_generator.png)
+
+- 
 
 ### 5.迭代器
 
