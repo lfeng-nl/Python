@@ -264,9 +264,14 @@ async def agen():
     - 一般使用`send()`发送特殊值,如`None`, 另协程退出;
     - 协程退出可以返回参数, 并抛出`StopIteration`异常; 异常对象的`value`属性保存返回值;
 
-- `yield from`: [参考](https://stackoverflow.com/questions/9708902/in-practice-what-are-the-main-uses-for-the-new-yield-from-syntax-in-python-3) 
+- `yield from`: [参考1](https://stackoverflow.com/questions/9708902/in-practice-what-are-the-main-uses-for-the-new-yield-from-syntax-in-python-3) [参考2](http://flupy.org/resources/yield-from.pdf)
 
     - 引入的主要原因有: 1.可以建立子生成器和调用者的双向通道,2.更方便的返回值;
+    - 双向通道;
+    - 生成器退出时,  生成器(委托和子生成器)中的`return`表达式会触发`StopIteration`异常;
+    - `yield from`表达式的值是子生成器终止时传给`StopIteration`异常的地一个参数; 
+    - 传入委托生成器的异常, 除了`GeneratorExit`之外, 都传给子生成器; 
+    - `GeneratorExit`传入委托生成器,或调用委托生成器的`close`, 都会在子生成器上调用`close`方法;
 
 - `yield from <expr>`: 其中<expr>是一个计算迭代的表达式，从中提取迭代器;
 
