@@ -66,6 +66,7 @@
   - 序列赋值：任何序列都可按位置赋值给变量；`  a, b = [1, 2], a, *b = [1,2,3]`;
   - 增强赋值语句：例如`a += 12, b += [1,2,3]`, python 中任何二元表达式运算符都有增强赋值语句；
   - 对于列表，增强赋值语句相当于`list_a.extend(list_b)`，实际也会转换为`extend`调用；
+  - 特殊赋值:`a,b=b,a+b `，交换`a,b `的值； 
 
 - `**`：幂运算符号；
 
@@ -93,7 +94,7 @@
         ````
 
 
-### 3.变量名和对象
+### 3.变量和对象
 
 - ==变量==事实上是到==对象==内存空间的一个指针！
 - ==变量==是一个系统表的元素，拥有指向对象连接空间。
@@ -159,7 +160,7 @@
       ```
 
 
-### 3.其他
+### 3.作用域
 
 -   `global`和`nonlocal`：
     -   `global `：用来在函数或其他==局部作用域中使用全局变量==。但是如果不修改全局变量也可以不使用global关键字。
@@ -177,7 +178,39 @@
     -   G：global，全局作用域；
     -   B：`build-in`内置作用域；
 
-## 3.高级特定
+### 4.闭包
+
+- 什么是闭包？为什么需要闭包？
+
+    - 函数和函数内部能访问到的变量（环境）的总和，就是一个闭包。
+
+    - 闭包常常用来「间接访问一个变量」。换句话说，「隐藏一个变量」。我们需要一个类似全局的变量，但是该变量又不能随意暴露出来，就需要闭包。
+
+    - 例如，利用闭包实现计数器：
+
+        ```python
+        def createCounter():
+            r = 0
+            def f():
+                nonlocal r
+                r += 1
+                return r
+            return f
+        
+        f1 = createCounter()
+        f2 = createCounter()
+        f1()  #-->返回 1
+        f1()  #-->返回 2
+        f1()  #-->返回 3
+        f2()  #-->返回 1
+        f1()  #-->返回 4
+        ```
+
+### 5.匿名函数（lambda表达式）
+
+- 匿名函数（lambda表达式）：只有一个表达式，返回值就是该表达式的结果。`lambda x，y: x*y`,分号前为函数参数，分号后表达式为函数返回值；
+
+## 3.迭代
 
 ### 1.列表生成式
 
@@ -214,161 +247,7 @@
 
 - 可以通过`for`循环或`next()`取出生成器中的数据, 每次取一个值, 最终抛出`StopIteration`的异常;4.yield表达式
 
-### 4.yield表达式
-
-> 用于定义`generator`或`asynchronous generator`, 用在函数定义体内, 表示该函数为`generator`, 用在`async def`函数体内表示使协程成为异步生成器(asynchronous generator)
-
-- 生成器的send方法`generator.send(value)` [参考](https://stackoverflow.com/questions/19302530/python-generator-send-function-purpose) :
-
-
-```python
-def gen():
-    yield 123
-    
-async def agen():
-    yield 123
-```
-
-### 4.协程
-
-> 对于`yield`,一方面,会产出一个值,提供给`next()`, 此外,还会作出让步, 暂停执行生成器, 让调用放继续工作, 从此角度看, 协程同生成器类似;
->
-> 协程的底层架构在PEP  [342中定义](https://www.python.org/dev/peps/pep-0342/)
->
-> 预激: 让协程向前执行到地一个yield表达式, 准备好作为活跃的协程使用;
-
-- `send(), throw(), close()`:
-
-    - `send()`方法:
-
-        ```python
-        >>> def double_inputs():
-        >>>		x = yield 12
-        >>>		y = yield x * 2  
-        ...
-        >>> gen = double_inputs()
-        >>> gen.send(None)  # 启动生成器, 只能使用next()或send(None)启动生成器, 生成器执行到yield处, 生成数据返回, 并暂停执行;
-        >>> gen.send(10)    # 跳转到暂停处, 将10传递给x, x=10, 然后运行到下一个yield处,
-        20
-        
-        ```
-
-    - `close()`方法: 关闭生成器, 后续调用会抛出`StopIteration`的异常;
-
-    - `throw()`方法: 在生成器的暂停点抛出指定异常, 如果生成器捕获, 则`throw`相当于`send()或next()`, 如果未捕获,则抛到调用处;
-
-- 异常: 当协程出现异常时, 如果协程未处理, 会向上冒泡, 并导致协程终止, 再次调用会产生`StopIteration`异常;
-
-- 终止协程
-
-    - 一般使用`send()`发送特殊值,如`None`, 另协程退出;
-    - 协程退出可以返回参数, 并抛出`StopIteration`异常; 异常对象的`value`属性保存返回值;
-
-- `yield from`: [参考1](https://stackoverflow.com/questions/9708902/in-practice-what-are-the-main-uses-for-the-new-yield-from-syntax-in-python-3) [参考2](http://flupy.org/resources/yield-from.pdf)
-
-    - 引入的主要原因有: 1.可以建立子生成器和调用者的双向通道,2.更方便的返回值;
-    - 双向通道;
-    - 生成器退出时,  生成器(委托和子生成器)中的`return`表达式会触发`StopIteration`异常;
-    - `yield from`表达式的值是子生成器终止时传给`StopIteration`异常的地一个参数; 
-    - 传入委托生成器的异常, 除了`GeneratorExit`之外, 都传给子生成器; 
-    - `GeneratorExit`传入委托生成器,或调用委托生成器的`close`, 都会在子生成器上调用`close`方法;
-
-- `yield from <expr>`: 其中<expr>是一个计算迭代的表达式，从中提取迭代器;
-
-- `yield from` :跟生成器(也是一个迭代器)时:
-
-    - 含有`yield from`的生成器被成为委托生成器;
-
-    - 迭代器产生的值直接返回给调用者, 调用者使用`send（）`发送到委托生成器的任何值都直接传递给迭代器。
-
-        ```python
-        # yield from 原理说明 PEP380
-        
-        _i = iter(EXPR) # 将可迭代对象转换为迭代器器
-        try:
-            _y = next(_i) 
-        except StopIteration as _e: # 捕获初始 StopIteration
-            _r = _e.value
-        else:
-            while 1:           # 循环
-                try:
-                    _s = yield _y 				# 将迭代器地一个值返回
-                except GeneratorExit as _e:		# 捕获 调用者的 close;
-                    try:
-                        _m = _i.close			# 如果迭代器为生成器,调用close;
-                    except AttributeError:
-                        pass
-                    else:
-                        _m()
-                    raise _e
-                except BaseException as _e:		# 捕获 调用着的其他异常
-                    _x = sys.exc_info()
-                    try:
-                        _m = _i.throw
-                    except AttributeError:
-                        raise _e
-                    else:
-                        try:
-                            _y = _m(*_x)
-                        except StopIteration as _e:
-                            _r = _e.value
-                            break
-                else:							
-                    try:
-                        if _s is None:			# 如果接收值None, next调用迭代器, 否则,send该值到迭代器
-                            _y = next(_i)
-                        else:
-                            _y = _i.send(_s)
-                    except StopIteration as _e: # 捕获结束异常
-                        _r = _e.value
-                        break
-        RESULT = _r
-        ```
-
-        
-
-
-
-- 协程就是利用生成器, 实现两个函数在一个线程中交替执行的过程. 由用户去切换执行过程(类似线程), 方便实现异步(避免复杂回调方式)
-
-- 利用`async def`定义协程函数, 函数体内使用 `await, async` 
-
-- `coroutine`协程: 一种更通用的子程序, 子程序在一个点进入一个点退出, 协程可以在多个点进入,退出和恢复, 可以使用`async def`实现;
-- `asynchronous generator`: 一个返回`asynchronous generator iterator`的函数; 用`async def`定义, 函数体内有`yield`表达式,  也就是`asynchronous generator function`; 可以包含 `await`表达式, `async for, async with`语句
-- `asynchronous generator iterator`: `asynchronous generator`函数返回, 是一个`asynchronous iterator`, 当使用`__anext__()`方法调用时, 返回一个`awaitable`对象, 该对对象将执行`asynchronous generator`函数体直到下一个`yield`表达式;
-- `awaitable`: 可以在`await`表达式中使用的对象, 可以是一个协程或具有`__await__()`方法的对象;
-- `await`表达式: 暂停一个`awaitable`对象, 只能在协程函数中使用;
-
-- `asynchronous iterable`: 可以在`anync for`语句中使用, `__aiter__()`方法必须返回一个`asynchronous iterator`; 
-- `asynchronous iterator`: 包含`__aiter__(), __anext__()`方法的对象, `__anext__`返回一个`awaitable`对象, `async for`调用`asynchronous iterator`的`__anext__()`方法;
-
-
-
-Coroutines is a more generalized form of subroutines. Subroutines are entered at one point and exited at another point. Coroutines can be entered, exited, and resumed at many different points. They can be implemented with the [`async def`](https://docs.python.org/3.7/reference/compound_stmts.html#async-def) statement.
-
-- 协程就是利用生成器的send接收参数,  从而实现两个函数在一个线程中交替执行的过程. 
-
-### 5.Asynchronous generator
-
-> python3.5 引入 `async/await`语法 , 方便定义 `Asynchronous generator`
-
-- 异步生成器对象: 
-
-  - 定义:`.__aiter__()`, 返回自身;
-
-  - 定义:`.__anext__()`, 返回一个`awaitable`;
-
-  - 定义:`.asend()`, 返回一个`awaitable`, 类似`send()`;
-
-  - 定义:`.athrow()`, 返回一个`awaitable`, 类似`throw()`;
-
-  - 定义:`.aclose()`, 返回一个`awaitable`, 类似`close()`;
-
-    ![](./image/async_generator.png)
-
-- 
-
-### 5.迭代器
+### 3.迭代器
 
 - 可迭代对象
 
@@ -404,103 +283,14 @@ Coroutines is a more generalized form of subroutines. Subroutines are entered at
     - `iter()`返回的迭代器-->`__iter__()`;
     - 循环调用`next()`;
 
-### 6.其他
+### 4.其他
 
--   特殊赋值:`a,b=b,a+b `，交换`a,b `的值； 
 -   切片：`[start_index : end_index : step] `
     -   `start_index `表示起始索引；
     -   `end_index `表示结束索引；
     -   `step `表示步长，步长不能为0，且默认值为1，为`-1 `可以逆序切片；
 
-## 4.函数式编程
-
--   函数式编程的三大特性
-
-    -   immutable data 不可变数据：默认变量不可变
-    -   first class function：使函数像变量一样来使用
-    -   尾递归优化：优化递归，每次递归都会重用stack
-
--   函数式编程的几个技术
-
-    -   `map`&`reduce`：
-    -   `pipeline`：把函数实例成一个一个的`action`，然后把`action`放到一个数组或是列表中，然后把数据传给这个`action list`；数据依次被各个函数所操作；
-    -   `recursing`递归：
-    -   `currying`把一个函数的多个参数分解成多个函数，然后把函数多层封装起来；
-    -   `higher order function`高阶函数，可以接收另一个函数做为参数，还可以把函数作为结果返回。
-
--   `map(func, *iterables)`：将传入的函数以此作用到==可迭代对象==元素，并把结果作为新的==`Iterator`==返回；
-
--   `filter(fuction, Iterable)` 根据函数返回的`True或False`确定==可迭代对象==元素的去留（True，保留）；
-
--   `sorted(iterable, key, )`, 可以根据key指定的function排序，如`sorted(a, key=abs)`
-
-### 1.闭包
-
--   什么是闭包？为什么需要闭包？
-    -   函数和函数内部能访问到的变量（环境）的总和，就是一个闭包。
-
-    -   闭包常常用来「间接访问一个变量」。换句话说，「隐藏一个变量」。我们需要一个类似全局的变量，但是该变量又不能随意暴露出来，就需要闭包。
-
-    -   例如，利用闭包实现计数器：
-
-        ```python
-        def createCounter():
-            r = 0
-            def f():
-                nonlocal r
-                r += 1
-                return r
-            return f
-
-        f1 = createCounter()
-        f2 = createCounter()
-        f1()  #-->返回 1
-        f1()  #-->返回 2
-        f1()  #-->返回 3
-        f2()  #-->返回 1
-        f1()  #-->返回 4
-        ```
-
-
-### 2.匿名函数（lambda表达式）
-
--   匿名函数（lambda表达式）：只有一个表达式，返回值就是该表达式的结果。`lambda x，y: x*y`,分号前为函数参数，分号后表达式为函数返回值；
-
-### 3.装饰器
-
--   装饰器`decorator`：1.函数也是对象，可以给变量赋值，2.装饰器就是一个返回函数的高阶函数，对参数函数进行修饰、包裹（做一些额外的工作）；
-
-    ```python
-    import functools
-    # log()返回一个内部函数；
-    def log(func)：
-    	# 修改函数名为func, func.__name__ == func
-    	@functools.wraps(func)
-        def wrapper(*args, **kw):
-            print('call %s'%func.__name)  # --> 添加的内容
-            return func(*args, **kw)
-        return wrapper
-    # 需要借助python的@语法
-    @log
-    def now():
-        pass
-    # @log 放到函数定义处，相当于执行了，now=log(now),
-
-    ```
-
--   `@`语法糖syntactic sugar
-
-    ```python
-    @decorator
-    def func():
-        pass
-    # 编译器会解释为
-    func = decorator(func)
-    ```
-
--   偏函数：`functools.partial(func, *args, **keywords)` ；帮助我们创建一个新的函数，
-
-## 5.模块
+## 4.模块
 
 ### 1.模块定义
 
@@ -600,7 +390,7 @@ Coroutines is a more generalized form of subroutines. Subroutines are entered at
 - 以名称字符串导入模块：`exec('import ' + modname)`；
 - `from `复制变量名，而不是连接；
 
-## 6.面向对象OOP
+## 5.面向对象OOP
 
 >   OOP：Object Oriented Programming
 
@@ -841,78 +631,76 @@ Coroutines is a more generalized form of subroutines. Subroutines are entered at
 - `__module__`: 表示当前操作的对象所在模块, 
 - 
 
-## 7.装饰器和元类
+## 6.装饰器和元类
 
 ### 1.装饰器
 
 > 装饰器自身是一个返回可调用对象的可调用对象；
-
-#### 1.函数装饰器
-
+>
 > 函数装饰器语法关键在于，@decorator ---> 相当于 `func = decorator(func)`;
 >
-> 也就是被装饰函数=装饰器内部的包装函数，包装函数执行额外代码后再调用原有被装饰函数；
+> 也就是被装饰函数 = 装饰器内部的包装函数，包装函数执行额外代码后再调用原有被装饰函数；
 
-- ```python
-  def decorator(F):
-      return F
-  
-  @decorator
-  def func(): 
-      ...
-  # 相当于 func = decorator(func)
-  ```
+- 函数装饰器
 
-- 装饰函数编写:
-
-  - ```python
-    import functools
-    # log()返回一个内部函数；
-    def log(func)：
-    	# 修改函数名为func, func.__name__ == func
-    	@functools.wraps(func)
-        def wrapper(*args, **kw):
-            print('call %s'%func.__name)  # --> 包装函数添加的内容
-            return func(*args, **kw)
-        return wrapper
-    # 需要借助python的@语法
-    @log
-    def now():
-        pass
-    # @log 放到函数定义处，相当于执行了，now=log(now),
-    ```
-
-#### 2.类装饰器
-
-- ```python
-  @decorator
-  class C:
-      ...
-  # 等同于
-  class C:
-      C = dcecorator(c)
-  ```
-
-- 可以用装饰器实现扩展类的功能
-
-  - ```python
-    def log_getattribute(cls):
-        orig_getattribute = cls.__getattribute__
-        
-        def new_getattribute(self, name):
-            print('getting: ', name)
-            return orig_getattribute(self,name)
-        cls.__getattribute__ = new_getattribute
-        return cls
+    ```python
+    def decorator(F):
+        return F
     
-    @log_getattribute
-    class A:
-        def __init__(self, x):
-            self.x = x
-            
+    @decorator
+    def func(): 
+        ...
+    # 相当于 func = decorator(func)
     ```
+    - 装饰函数编写:
 
-  - 
+      - ```python
+        import functools
+        # log()返回一个内部函数；
+        def log(func)：
+        	# 修改函数名为func, func.__name__ == func
+        	@functools.wraps(func)
+            def wrapper(*args, **kw):
+                print('call %s'%func.__name)  # --> 包装函数添加的内容
+                return func(*args, **kw)
+            return wrapper
+        # 需要借助python的@语法
+        @log
+        def now():
+            pass
+        # @log 放到函数定义处，相当于执行了，now=log(now),
+        ```
+
+- 类装饰器
+
+    - ```python
+        @decorator
+        class C:
+            ...
+        # 等同于
+        class C:
+            C = dcecorator(c)
+        ```
+
+    - 可以用装饰器实现扩展类的功能
+
+    - ```python
+      def log_getattribute(cls):
+          orig_getattribute = cls.__getattribute__
+          
+          def new_getattribute(self, name):
+              print('getting: ', name)
+              return orig_getattribute(self,name)
+          cls.__getattribute__ = new_getattribute
+          return cls
+      
+      @log_getattribute
+      class A:
+          def __init__(self, x):
+              self.x = x
+              
+      ```
+
 
 ### 2.元类   [参考](http://blog.jobbole.com/21351/)
 
@@ -964,7 +752,6 @@ Coroutines is a more generalized form of subroutines. Subroutines are entered at
     attribut = property(fget, fset, fdel, doc),
     ```
 
-  - 
 
 ## 7.异常、调试和测试
 
@@ -1073,11 +860,11 @@ if __name__ == '__main__':
 
 ### 1.多进程
 
-#### 利用系统原生`fork()`
+*利用系统原生`fork()`*
 
 - `fork()`：通过`os.fork()`创建进程，同`fork()`一致，父进程中返回子进程ID，子进程返回0；
 
-#### 利用`multiprocessing `模块
+*利用`multiprocessing `模块*
 
 - `multiprocessing `提供了了`Process`类来代表一个进程对象；适用方式：先创建对象，start 方法，join方法，
 
@@ -1133,7 +920,7 @@ if __name__=='__main__':
 - `run()`: 默认会调用传入的`target`参数指定的方法, 创建`Thread`子类可以重写该方法; 
 - !!! ==注意启动线程唯一方式 `start()`==
 
-### 3.local()
+#### 3.local()
 
 - 很多时候线程需要有自己的私有数据, 但是, 使用局部变量又带来使用上的不方便, 所以引入`threading.local()`;
 - 全局声明, 但是每个线程都会有自己的实例,互不影响;
