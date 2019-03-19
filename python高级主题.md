@@ -234,5 +234,37 @@ x, y = p0
 
 ## 7.Pillow
 
-### 
+## 8.Celery
+
+> Celery是python语言实现的分布式队列服务, Celery用消息通信, 通常使用中间人(Broker)在客户端和职程间斡旋, 客户端向消息队列添加消息,之后中间人把消息派送给职程.
+>
+> [参考1](<https://blog.csdn.net/weixin_40475396/article/details/80439781>), 
+
+### 1.概念
+
+- **Application**: 一个`Celery`实例被称为一个应用`app`;
+    - 定义的任务, 都会被添加到`app.tasks`中, 可以通过任务名称, 获取到需要执行的任务;
+    - `app.conf`: 配置Celery的工作方式;
+    - `app.on_init()`: 设置初始化时的回调;
+- **Task**: 定义了调用任务时发生的事情,以及当work收到该消息时会发生什么.
+    - 可以通过`app.task()`装饰器创建一个任务;
+    - 每个任务都有不同的名称, 发送给`celery`的任务消息中会引用这个名称, 工作单元就是根据这个名称找到正确的执行函数;
+    - `task()`装饰器可以传入参数,如`name`: 指定任务名称, `bing=True`: 该函数为任务的绑定方法, 可以接受`self`参数, 获取任务实例;
+    - 推荐使用`模块名+函数名`作为Task名称;
+    - `import`Task时, 名称可能因路径不同而变化, 导致与APP中记录不匹配;
+    - `retry()`: 在遇到某些错误时重新执行, `bind`参数必须为`True`, 通过`self.retry()`重新执行;由认为携带的`max_retries`值确定最大尝试次数.
+- **Logging**: `from celery.utils.log import get_task_logger`
+- **Calling Tasks**: 调用任务的方式
+    - `apply_async()`:
+    - `delay()`: 
+    - `calling()`:
+- **Broker**: Celery中介于生产者和消费者之间的中间人. 一般采用RabbitMQ或Redis来做Broker;
+- **Worker**: 任务消费者, 在后台执行队列中的任务;
+    - 可以通过`celery --app=app worker -l info`启动 worker;
+
+### 2.开始
+
+
+
+****### 
 
