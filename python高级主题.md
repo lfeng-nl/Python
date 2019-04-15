@@ -91,19 +91,34 @@
 
 ## 2.Python函数式编程
 
-- 函数式编程的三大特性
-    - immutable data 不可变数据：默认变量不可变
-    - first class function：使函数像变量一样来使用
-    - 尾递归优化：优化递归，每次递归都会重用stack
-- 函数式编程的几个技术
-    - `map`&`reduce`：
-    - `pipeline`：把函数实例成一个一个的`action`，然后把`action`放到一个数组或是列表中，然后把数据传给这个`action list`；数据依次被各个函数所操作；
-    - `recursing`递归：
-    - `currying`把一个函数的多个参数分解成多个函数，然后把函数多层封装起来；
-    - `higher order function`高阶函数，可以接收另一个函数做为参数，还可以把函数作为结果返回。
+> 函数式编程的三大特性: 1.immutable data 不可变数据：默认变量不可变; 2.first class function：使函数像变量一样来使用; 3.尾递归优化：优化递归，每次递归都会重用stack;  关于[*尾调用和尾递归*](http://www.ruanyifeng.com/blog/2015/04/tail-call.html)
+
+### 1.函数注解
+
+- Python3提供的一种句法, 用于为函数声明中的参数和返回值附加元数据,声明参数和返回值类型,范围等信息:
+
+  ```python
+  # text: str类型, max_len: int, 大于0, 默认值为 80, 返回值为str类型
+  def clip(text:str, max_len:'int > 0'=80) -> str:
+      pass
+  ```
+
+- python对注解仅仅是将其存储在函数`__annotations__`属性中, 并不做检查, 不做强制, 不做验证;
+
+### 2.python高阶函数
+
 - `map(func, *iterables)`：将传入的函数以此作用到==可迭代对象==元素，并把结果作为新的==`Iterator`==返回；
+- `reduce()`: 把一个函数作用在一个序列上, 这个函数必须接收两个参数, `reduce`把结果继续和序列的下一个元素做累积计算,
 - `filter(fuction, Iterable)` 根据函数返回的`True或False`确定==可迭代对象==元素的去留（True，保留）；
 - `sorted(iterable, key, )`, 可以根据key指定的function排序，如`sorted(a, key=abs)`
+
+### 3.支持函数式编程的包
+
+- `operator`: 可以导出一些运算符函数, 以便在函数式编程中使用,例如`operator.mul(a, b) === a*b`
+- `functools`: 用于增强函数功能;
+  - `functools.partial`: 基于一个函数创建一个新的可调用对象, 把原函数的某些参数固定.
+
+### 4.装饰器
 
 # II Python常用模块
 
@@ -189,7 +204,7 @@ x, y = p0
 >
 > 1.`try...finally...`, 使用完毕关闭资源;
 >
-> 2.`with...: pass` : 底层通过`__enter__(), __exit__()`方法实现;
+> 2.`with...as: pass` : 底层通过`__enter__(), __exit__()`方法实现;
 
 - `@contextmanager`: 装饰一个生成器, `yield`前的代码在`with`调用的时候执行, `yield` 的值作为 `with`接收到的数据, `yield`后的数据在`with`块执行完毕时执行;
 
