@@ -4,6 +4,8 @@
 
 ## 1.异步IO
 
+> 参考: [深入理解python异步编程](<https://mp.weixin.qq.com/s?__biz=MzIxMjY5NTE0MA==&mid=2247483720&idx=1&sn=f016c06ddd17765fd50b705fed64429c>) [深入理解Python异步编程](<https://mp.weixin.qq.com/s?__biz=MjM5MzgyODQxMQ==&mid=2650370139&idx=1&sn=e4402260d852facb6f3d33ec20ed2be5&chksm=be9ccb0f89eb4219d986b1f15347f226a726f0da34aecbd593c0f61038e65f48d5334aeb2ca3&mpshare=1&scene=1&srcid=&pass_ticket=gLwNW%2BUgDzD3eMKuOQblqsLb05KdJis8nSFBCKEJffXeWuJIDpxEUQiUkGl74q2y#rd>)
+
 ### 1.协程 coroutine, [参考](https://docs.python.org/zh-cn/3.7/library/asyncio-task.html)
 
 > 让原先需要用异步+回调方式写的代码可以用看似同步的方式写出来, 协程由于不需要线程切换开销,也不需要锁机制, 具有较高的效率.
@@ -13,6 +15,10 @@
 ==*python中协程最早是基于生成器实现,  使用`yield from`语句,对基于生成器的协程的支持 **已弃用** 并计划在 Python 3.10 中移除。*==
 
 - 概念:
+
+    - ==事件循环==: 利用`select, poll, epoll`, 当资源可用时, 向应用代码发出必要的调用;
+    - ==Future==: 
+    - ==Task==: 
 
     - `await`表达式: 挂起`coroutine`的执行以等待一个`awaitable`对象, 只能在`coroutine function`内使用;`
     - `awaitable`: 可等待对象,  能够在`await`表达式中使用的对象.可以是`coroutine`或是具有`__await__()`方法的对象; 主要有三种类型:==协程,任务,Future==;
@@ -242,6 +248,8 @@ x, y = p0
 
 ### 1.概念
 
+> Celery实例以app为例, 任务以add为例;
+
 - **Application**: 一个`Celery`实例被称为一个应用`app`;
     - 定义的任务, 都会被添加到`app.tasks`中, 可以通过任务名称, 获取到需要执行的任务;
     - `app.conf`: 配置Celery的工作方式;
@@ -255,12 +263,27 @@ x, y = p0
     - `retry()`: 在遇到某些错误时重新执行, `bind`参数必须为`True`, 通过`self.retry()`重新执行;由认为携带的`max_retries`值确定最大尝试次数.
 - **Logging**: `from celery.utils.log import get_task_logger`
 - **Calling Tasks**: 调用任务的方式
-    - `apply_async()`:
-    - `delay()`: 
-    - `calling()`:
+    - `delay()`: 简单调用,`task.delay(...)`
+    - `apply_async()`: 必须通过`(args=[arg1, arg2], kwargs={'kwarg1':'x'})`传递参数, 可以通过关键字参数实现特殊功能;
+        - `link`: 执行完接着执行另一个任务, 并且, 父任务结果作为参数传递给子任务;
+        - `countdown`: 延迟执行, 秒数;
+        - `eta`: 不同于`countdown`在于, `eta`需要一个精确的日期和时间;
+        - `expires`: 过期时间;
+        - `retry`: 链接失败时是否需需要重试;
+        - `retry_policy`: 重试策略;
+        - `queue`: 路由到指定队列;
+        - `immutable=True`: 回调时, 不带任何附加参数;
+- **Signatures**: 描述单个任务调用的参数和执行选项, 
+    - 创建签名: `add.s(), add.signature((xx), xxx=xx)`;
+    - 使用任务的调用方式调用`.delay(), apply_async()`;
+    - 使用`.si()`创建immutable签名, 相当于`immutable=True`;
+    - 链式执行: `chain(s1, s2, s3)(), (s1|s2|s3)()`; 
+    - 
 - **Broker**: Celery中介于生产者和消费者之间的中间人. 一般采用RabbitMQ或Redis来做Broker;
 - **Worker**: 任务消费者, 在后台执行队列中的任务;
     - 可以通过`celery --app=app worker -l info`启动 worker;
+- 
+    - 
 
 ### 2.开始
 
