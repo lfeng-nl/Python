@@ -109,7 +109,7 @@
 
 - `for...else`: else段在循环自然结束,而不是break时执行, 可以用于清除哨兵变量等操作;
 
-- `with`: 上下文管理器, 可作用于含有`__enter__(), __exit__()`的对象;
+- `with`: 上下文管理器, 可作用于含有`__enter__(self), __exit__(self，exc_type, exc_value, traceback)`的对象;
   - 执行过程: 调用`__enter__()`,任何返回值都会绑定到`as`子句 --> 执行代码块 --> 调用`__exit__()`;
   - `contextlib`模块;
 - 参数注解:
@@ -548,7 +548,6 @@
     - `__getattr__`: 实现当属性查询失败时, 自动处理;
     - `__getattribute__`: 无条件实现属性调用, 所有属性调用入口. 用`object.__getattribute__`避免循环调用; 
     
-
 - `property()`：把特定属性访问定位到get和set处理器函数，也叫特性；
 
 ###  3.运算符重载
@@ -561,7 +560,7 @@
 
 - `__add__(self, other)`：重载运算符`+`；此外还有`__radd__, __iadd__`
 
-- `__bool__, __len__, __lt__, __gt__`
+- `__lt__(), __le__(), __eq__(), __ne__(), __gt__(), __ge__()...`
 
 ### 4.python如何实现继承
 
@@ -582,7 +581,7 @@
 
 ### 5.特殊方法(魔术方法)
 
-> 类中有很多类似`__xxx__`之类的函数，可以作为钩子，实现特殊的功能, 称为魔术方法；
+> 类中有很多类似`__xxx__`之类的函数，可以作为钩子，实现特殊的功能, 称为魔术方法；[参考](<https://docs.python.org/zh-cn/3/reference/datamodel.html#basic-customization>)
 
 - 基础
     - `__init__(self,...)`：构造函数，对象被创建时调用；
@@ -601,17 +600,21 @@
 - 数值转换
   - `__abs__, __bool__, ...`
 - 属性访问控制
+    - `__slots__`: 显式声明数据成员；
     - `__getattr__(self, name)`: 定义当用户试图获取一个不存在的属性的行为;
     - `__getattribute__(self, name)`: 属性访问拦截器, 访问类的属性时控制被访问时的行为, **注意避免循环调用**;
     - `__setattr__(self, name, value)`: 定义属性被赋值时的行为;
-    - `__dict__`: 以字典形式显示当前对象的所有属性以及相对应的值;
-        - `dir`:返回一个列表, 如果是对象, 包含对象的`__dict__`属性, 和类的属性; 
+    - `__dict__`:  属性字典；
+    - `__dir__()`:  在`dir()`被调用时调用
+        - `dir()`:返回包含属性的列表, 如果对象提供`__dir__()`方法，直接使用， 除此使用`dir()`逻辑, 包含实例的属性，类的属性和递归基类的属性; 
 - 上下文管理器
-    - `__enter__()`进入上下文管理器调用;
-        - `__exit__()`退出上下文管理器调用;
+    - `__enter__(self)`进入上下文管理器调用;
+    - `__exit__(self, exc_type, exc_value, trace)`退出上下文管理器调用;
+        - `exc_type, exc_value, trace`: 可用于异常处理；
 - 其他
     - `__module__`: 当前对象的类型所在模块;
     - `__class__`: 当前对象的类;
+    - `__hash__`：应该同`__eq__()`一同定义， 表示可哈希；
 
 ## 6.装饰器和元类
 
@@ -719,36 +722,32 @@
 
 - `except`：如果没有发生错误，则此段不会执行；发生错误，会被此段捕获；
 
-- `finally` ：如果有此段，则最后一定会执行（发生不发生异常都会执行）；
+- `finally` ：如果有此段，则最后一定会执行(发生不发生异常都会执行), `try...finally`语句可用上下文管理替代；
 
 - `raise `：抛出异常；
 
 - 错误种类：错误也是`class`，所有错误类型都继承自`BaseException`，捕获时不但可以捕获指定类型，还能将子类型同时捕获；
 
-- 自定义异常：`Exception()`,
+- 可以通过继承`Exception`定义异常类；
 
-- `logging`：模块记录错误信息；
+    ```python
+    try:
+    	pass
+    except Exception1:
+        # 存在指定异常时会被捕获
+        pass
+    except Exception2:
+        pass
+    else:
+        # 未发生异常捕获时执行
+        pass
+    finally:
+        # 必定执行，无论发生未发生异常
+        pass
+    ```
 
-- `raise`：抛出一个错误实例；
 
-  ```python
-  try:
-  	pass
-  except Exception1:
-      pass
-  except Exception2:
-      pass
-  else:
-      pass
-  finally:
-      pass
-  ```
-
-- `with/as` 环境管理：
-
-  - with/as 语句的设计是作为try/finally用法模式的替代方案。
-
-### 1.调试
+### 2.调试
 
 -   `assert 表达式` ：断言，如果表达式为真，继续执行；否则抛出`AssertionError`； python可以在运行时加入大O，`python3 -O xxxx` 关闭`assert`
 -   `logging`：同`assert`相比，`logging`不会抛出异常，而且可以输出到文件；
@@ -756,7 +755,7 @@
     -   可以通过`logging.basicConfig(level=logging.INFO)`设置等级；
 -   `pdb` ：python调试工具，通过`python -m pdb xxx`启动；
 
-### 2.文档测试
+### 3.文档测试
 
 >   编写注释时，明确的写出函数的期望输入和输出，然后通过Python的文档测试模块`doctest` 可以直接提取注释中的代码并执行测试
 
@@ -777,7 +776,7 @@ if __name__ == '__main__':
     doctest.testmod()
 ```
 
-### 3.单元测试
+### 4.单元测试
 
 >   "测试驱动开发 TDD"；单元测试是用来对一个模块、一个函数或者一个类来进行正确性检验的测试工作。这种以测试为驱动的开发模式最大的好处就是确保一个程序模块的行为符合我们设计的测试用例，在将来修改的时候，可以极大程度地保证该模块行为的正确性；
 
