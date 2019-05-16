@@ -25,22 +25,36 @@
 
 #### 3.`list`注意点：
 
+- python的`list`实现不是链表数据结构, 而是长度可变数组(指数过分配), 插入和删除元素消耗较高(O(n)). 如果需要真正意义上的链表结构, 可以使用`collections.deque`;
+
 - `list.append(object)`：附加单个元素到list的尾部；
 - `list.extend([xx, xx])`：附加列表到元素尾部；--> 等同于  `list_a = list_a + list_b`
 - `list.remove()`：移除第一非匹配到的元素；
 - 列表是可变对象，可以原处修改；
 - 遍历删除或添加列表元素：
-  - ==直接遍历，当删除或增加列表元素时，列表长度发生变化，但遍历的长度不变。会产生问题！==
+  - **直接遍历，当删除或增加列表元素时，列表长度发生变化，但遍历的长度不变。会产生问题！**
   - 推荐有此需求时，遍历列表的拷贝；
 
-#### 4.字典 dict注意点
+#### 4.字典` dict`注意点
 
 - `same_key in D`：键存在测试；
+
 - `D.keys()`：-->所有键；
+
 - `D.values()`：所有值；
+
 - `D.items()`：键值对元组；
+
 - `D.get('key', default=None)`：获取一个键的值，不存在不会抛出异常，返回默认值；
-- ==字典是无序的，哈希表==；
+
+- **字典是无序的，哈希表**: 只有**可哈希的**对象才可以作为字典的键, 实现`__hash__(), __eq__()`两个方法;
+
+  > 扩展: 解决哈希冲突
+  >
+  > - 链接法: 映射到同一位置时,将同一位置的元素加入同一个链表;
+  > - 开放定址法: 映射到同一位置时, 重新寻找位置, 每个位置最多有一个元素;(**cPython采用此方式**)
+
+  
 
 #### 5.元组 tuple
 
@@ -57,8 +71,6 @@
 
 - None：表示为空，一个特殊的对象，类型为`Nonetype`，表示数据为空，对应的布尔值为False；
 
-
-
 ### 2.运算符和语句
 
 基本同C语言类似，存在特殊点；
@@ -68,33 +80,17 @@
   - 增强赋值语句：例如`a += 12, b += [1,2,3]`, python 中任何二元表达式运算符都有增强赋值语句；
   - 对于列表，增强赋值语句相当于`list_a.extend(list_b)`，实际也会转换为`extend`调用；
   - 特殊赋值:`a,b=b,a+b `，交换`a,b `的值； 
-
 - `**`：幂运算符号；
-
 - `//`：取整除；
-
 - `/` ：精确除（即使能够整除得到的也是浮点数）；
-
 - `<<,>>` ：左移右移，会保留符号位；
-
 - 逻辑运算：`and, or, not`
-
 - `lambda表达式` ：`a = lambda x: x**2`
-
 - python条件判断：
 
     -   可以使用`10 < a < 20 `这种方式；
 
-    -   ````
-        if ...:
-        	pass
-        elif ...:
-        	pass
-        else:
-        	pass
-        ````
-
-- `for...else`: else段在循环自然结束,而不是break时执行, 可以用于清除哨兵变量等操作;
+    -   `if elif else`
 
 ### 3.变量和对象
 
@@ -108,6 +104,16 @@
 - `sys.getrefcount()`会返回引用计数；
 - 类型的概念是存在于对象中，而不是变量名中；变量是通用的，只是在特定的时间点，简单的引用了一个特定的对象而已；
 - 引用是一种关系，以内存中的指针的形式实现；
+
+### 4.特殊语法
+
+- `for...else`: else段在循环自然结束,而不是break时执行, 可以用于清除哨兵变量等操作;
+
+- `with`: 上下文管理器, 可作用于含有`__enter__(), __exit__()`的对象;
+  - 执行过程: 调用`__enter__()`,任何返回值都会绑定到`as`子句 --> 执行代码块 --> 调用`__exit__()`;
+  - `contextlib`模块;
+- 参数注解:
+  - 
 
 ## 2.函数
 
@@ -526,11 +532,15 @@
   Hello = type("Hello", (object,), dict(hello=fn))
   ```
 
-- 静态方法和类方法
+- 普通方法, 静态方法和类方法
 
+    - 普通方法: 可以理解为一般函数, 第一个参数需要传入一个对象;
     - 静态方法：嵌套在一个类中，用`@staticmethod`修饰, 没有`self`和`cls`参数, 几乎相当于普通函数, 只是与该类有关联; 
     - 类方法：相比于普通方法, 传递给它们的第一个参数是一个类对象而不是实例`cls`, 因此可以在方法中调用类相关的属性和方法；用`@classmethod`修饰, 可以通过类和实例调用；`@classonlymethod`: 只能通过类调用, 调用时会判断实例参数`instance`是否为`None`, 是则抛出异常;
     - 区别点：(归根是两种方法传入参数不同)1.两者都能通过实例或类调用，2.静态方法第一个参数传入类，可以在方法内调用类属性；类方法无传入函数，无法操作类属性，通常用于设置环境变量等操作；
+    - 抽象方法:  `@abc.abstractmethod`
+
+- 方法的调用:
 
 - `__get__, __getattr__, __getattribute__, __getitem__`: 
 
@@ -538,6 +548,8 @@
     - `__getattr__`: 实现当属性查询失败时, 自动处理;
     - `__getattribute__`: 无条件实现属性调用, 所有属性调用入口. 用`object.__getattribute__`避免循环调用; 
     
+
+- `property()`：把特定属性访问定位到get和set处理器函数，也叫特性；
 
 ###  3.运算符重载
 
@@ -559,23 +571,30 @@
 >
 > `super(type, [object-or-type])`: type 用来定位当前 MRO 的index, 并返回`mro[index + 1] `作为搜索类表, object-or-type 用来生成 MRO, 
 
-- 关于`super()`, 可参考 [super](https://rhettinger.wordpress.com/2011/05/26/super-considered-super/), 
+- 关于`super()`, 可参考 [super](https://rhettinger.wordpress.com/2011/05/26/super-considered-super/)
+    - `super()`: 实力化一个super对象, 就像父类的一个代理, 通过`__getattribute__`, 遍历`mro`列表中的类并返回第一个满足条件的属性;
     - `super(type, object)`: 绑定`type`父类的对象, object需要是type的实例;
     - `super()`: 在方法内, 相当于`super(__class__, <first_arg>)`
     - 当第二个参数不传时, super未绑定类型;
+    - 
+- 混入(mixin)类是指继承两个或两个以上的类, 并将他们的特性混合在一起;
 - python应避免多重继承;
 
 ### 5.特殊方法(魔术方法)
 
 > 类中有很多类似`__xxx__`之类的函数，可以作为钩子，实现特殊的功能, 称为魔术方法；
 
-- `__init__(self,...)`：构造函数，对象被创建时调用；
-- `__new__(self)`: 用于创建对象并返回, 在`__init__`前被调用;
-- `__del__(self)`：在对象被销毁时调用；
-- `__str__(self)`：返回一个字符串，在实例化对象被`print()`或`str()`调用时调用；
-- `__repr__(self)`: 返回一个字符串, 在`repr()`中调用,**交互式终端中用于提示** , `__str__`不存在时替代`__str__`功能;
-- `__iter__(self)` ：如果一个类想被用于`for...in `循环，就必须实现一个`__iter__()`方法；该方法返回一个迭代对象，然后，Python的`for`循环就会不断调用该迭代对象的`__next__()` 方法拿到循环的下一个值；
-    - 可迭代对象就是含有`__iter__()`方法的对象;
+- 基础
+    - `__init__(self,...)`：构造函数，对象被创建时调用；
+    - `__new__(self)`: 用于创建对象并返回, 在`__init__`前被调用;
+    - `__del__(self)`：在对象被销毁时调用；
+    - `__str__(self)`：返回一个字符串，在实例化对象被`print()`或`str()`调用时调用；
+    - `__repr__(self)`: 返回一个字符串, 在`repr()`中调用,**交互式终端中用于提示** , `__str__`不存在时替代`__str__`功能;
+    - `__call__()`: 可调用;
+- 迭代器
+    - `__iter__(self)` ：如果一个类想被用于`for...in `循环，就必须实现一个`__iter__()`方法；该方法返回一个迭代对象，然后，Python的`for`循环就会不断调用该迭代对象的`__next__()` 方法拿到循环的下一个值；
+        - 可迭代对象就是含有`__iter__()`方法的对象;
+    - `__next__`: 返回容器下一个元素;
 - 字符串
   - `__repr__`: 使用`repr`获取对象的字符串形式时, 会调用`__repr__`方法, 例如终端里打印一个对象;
   - `__str__`: 使用`str()`函数时被调用, 当`__str__`未实现时, 会调用`__repr__`方法;
@@ -587,6 +606,9 @@
     - `__setattr__(self, name, value)`: 定义属性被赋值时的行为;
     - `__dict__`: 以字典形式显示当前对象的所有属性以及相对应的值;
         - `dir`:返回一个列表, 如果是对象, 包含对象的`__dict__`属性, 和类的属性; 
+- 上下文管理器
+    - `__enter__()`进入上下文管理器调用;
+        - `__exit__()`退出上下文管理器调用;
 - 其他
     - `__module__`: 当前对象的类型所在模块;
     - `__class__`: 当前对象的类;
@@ -595,13 +617,13 @@
 
 ### 1.装饰器
 
-> 装饰器自身是一个返回可调用对象的可调用对象；
+> 装饰器本质是一个返回可调用对象的可调用对象；
 >
 > 函数装饰器语法关键在于，@decorator ---> 相当于 `func = decorator(func)`;
 >
 > 也就是被装饰函数 = 装饰器内部的包装函数，包装函数执行额外代码后再调用原有被装饰函数；
 
-- 函数装饰器
+- 装饰函数
 
     ```python
     def decorator(F):
@@ -612,54 +634,38 @@
         ...
     # 相当于 func = decorator(func)
     ```
-    - 装饰函数编写:
+    
+- 装饰类, 可以用装饰器实现扩展类的功能
 
-      - ```python
-        import functools
-        # log()返回一个内部函数；
-        def log(func)：
-        	# 修改函数名为func, func.__name__ == func
-        	@functools.wraps(func)
-            def wrapper(*args, **kw):
-                print('call %s'%func.__name)  # --> 包装函数添加的内容
-                return func(*args, **kw)
-            return wrapper
-        # 需要借助python的@语法
-        @log
-        def now():
-            pass
-        # @log 放到函数定义处，相当于执行了，now=log(now),
-        ```
+  ```python
+  @decorator
+  class C:
+      ...
+  # 等同于
+  class C:
+      C = dcecorator(C)
+  ```
+  
+  
+  
+- 装饰函数编写:
 
-- 类装饰器
-
-    - ```python
-        @decorator
-        class C:
-            ...
-        # 等同于
-        class C:
-            C = dcecorator(c)
-        ```
-
-    - 可以用装饰器实现扩展类的功能
-
-    - ```python
-      def log_getattribute(cls):
-          orig_getattribute = cls.__getattribute__
-          
-          def new_getattribute(self, name):
-              print('getting: ', name)
-              return orig_getattribute(self,name)
-          cls.__getattribute__ = new_getattribute
-          return cls
-      
-      @log_getattribute
-      class A:
-          def __init__(self, x):
-              self.x = x
-              
-      ```
+  - ```python
+    import functools
+    # log()返回一个内部函数；
+    def log(func)：
+    	# 修改函数名为func, func.__name__ == func
+    	@functools.wraps(func)
+        def wrapper(*args, **kw):
+            print('call %s'%func.__name)  # --> 包装函数添加的内容
+            return func(*args, **kw)
+        return wrapper
+    # 需要借助python的@语法
+    @log
+    def now():
+        pass
+    # @log 放到函数定义处，相当于执行了，now=log(now),        
+    ```
 
 
 ### 2.元类   [参考](http://blog.jobbole.com/21351/)
@@ -701,16 +707,6 @@
   ```
 
 - `__class__`：一个实例所属的类；普通对象就是所属的类，普通类就是`type`或`元类`；
-
-### 3.管理属性
-
-- `__getattr__, __setattr__`：将定义属性和获取和赋值指向通用的处理器方法；
-
-- `property()`：把特定属性访问定位到get和set处理器函数，也叫特性；
-
-  - ```python
-    attribut = property(fget, fset, fdel, doc),
-    ```
 
 
 ## 7.异常、调试和测试
