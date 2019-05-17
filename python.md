@@ -8,9 +8,9 @@
 #### 1.数据类型基础
 
 - 基本数据类型：`int, float, str, bool(True, False), None `
-- 容器：`list, str, tuple, dict, set 等` 可以实现==`in`和`not in `==表达式和==索引==操作；*`in`通过调用`_-
+- 容器：`list, str, tuple, dict, set 等` ;
 
-#### 2.str注意点：
+#### 2. str注意点：
 
 - `s = r'\temp\spam'`：Raw字符串，注意，`\`不能出现在最后一位；
 - `r_s = s[::-1]`：逆序；
@@ -532,12 +532,12 @@
   Hello = type("Hello", (object,), dict(hello=fn))
   ```
 
-- 普通方法, 静态方法和类方法
+- **普通方法, 静态方法和类方法**
 
     - 普通方法: 可以理解为一般函数, 第一个参数需要传入一个对象;
     - 静态方法：嵌套在一个类中，用`@staticmethod`修饰, 没有`self`和`cls`参数, 几乎相当于普通函数, 只是与该类有关联; 
     - 类方法：相比于普通方法, 传递给它们的第一个参数是一个类对象而不是实例`cls`, 因此可以在方法中调用类相关的属性和方法；用`@classmethod`修饰, 可以通过类和实例调用；`@classonlymethod`: 只能通过类调用, 调用时会判断实例参数`instance`是否为`None`, 是则抛出异常;
-    - 区别点：(归根是两种方法传入参数不同)1.两者都能通过实例或类调用，2.静态方法第一个参数传入类，可以在方法内调用类属性；类方法无传入函数，无法操作类属性，通常用于设置环境变量等操作；
+    - 区别点：(归根是两种方法传入参数不同) 1.两者都能通过实例或类调用，2.类方法第一个参数传入类，可以在方法内调用类属性；静态方法无传入参数，无法操作类属性，通常用于设置环境变量等操作；
     - 抽象方法:  `@abc.abstractmethod`
 
 - 方法的调用:
@@ -585,7 +585,7 @@
 
 - 基础
     - `__init__(self,...)`：构造函数，对象被创建时调用；
-    - `__new__(self)`: 用于创建对象并返回, 在`__init__`前被调用;
+    - `__new__(cls, ...)`: 用于创建实例并返回, 在`__init__`前被调用, 重写时需要显示调用并返回父类`__new__()`方法;
     - `__del__(self)`：在对象被销毁时调用；
     - `__str__(self)`：返回一个字符串，在实例化对象被`print()`或`str()`调用时调用；
     - `__repr__(self)`: 返回一个字符串, 在`repr()`中调用,**交互式终端中用于提示** , `__str__`不存在时替代`__str__`功能;
@@ -615,8 +615,9 @@
     - `__module__`: 当前对象的类型所在模块;
     - `__class__`: 当前对象的类;
     - `__hash__`：应该同`__eq__()`一同定义， 表示可哈希；
+    - `__bases__`: 由基类所组成的元组;
 
-## 6.装饰器和元类
+## 6.装饰器, 元类
 
 ### 1.装饰器
 
@@ -673,29 +674,28 @@
 
 ### 2.元类   [参考](http://blog.jobbole.com/21351/)
 
-> 元类就是用来创建类的“东西”, 像类是用来创建实例一样, 元类就是用来创建类的.例如`type`就是一个内建的元类,
+> **重要**: `type`创建类, `__new__()`创建实例;
+>
+> 元类就是用来创建类的“东西”, 像类是用来创建实例一样, 元类就是用来创建类的.例如`type`就是一个内建的元类: `type(name, bases, dict)`,
 >
 > 元类本身: 1.拦截类的创建, 2. 修改类, 3.返回修改之后的类;
 >
 > 主要用途: 创建API, 例如 Django的ORM, 
 >
-> `__new__(cls, name, bases, attrs, **kwargs)`方法接收到的参数依次是：
->
-> 1. cls, 当前元类, 只有此项是指当前元类；
-> 2. name, 要创建的类的名字；
-> 3. bases, 要创建的类所继承的父类集合；
-> 4. attrs, 要创建的类的属性和方法集合（不包括继承的）。
+> `__new__(cls, ...)`, 负责创建类实例的静态方法：`cls`, 需要创建实例的类；
 
-- 例: 元类的创建
+- 用class语句创建的每个类都隐式地使用`type`作为其元类,  即类都是通过`type`构建的. `class`语句默认提供`class Test(metaclass=type):...`, *type创建类*;
+- `type(name, bases, dict)`: *name* 字符串即类名并且会成为 [`__name__`](https://docs.python.org/zh-cn/3/library/stdtypes.html#definition.__name__) 属性；*bases* 元组列出基类并且会成为 [`__bases__`](https://docs.python.org/zh-cn/3/library/stdtypes.html#class.__bases__) 属性；而 *dict* 字典为包含类主体定义的命名空间并且会被复制到一个标准字典成为 [`__dict__`](https://docs.python.org/zh-cn/3/library/stdtypes.html#object.__dict__) 属性 
 
 
 - ```python
+  # 元类的创建
   # 元类一般以Metaclass结尾,表明是一个元类, 元类是创建类,必须从type类型派生；
   class ListMetaclass(type): 
       # 重写 __new__ 方法, 在创建类时调用(注意,是创建类的时候);
       def __new__(cls, name, bases, attrs):
           attrs['add'] = lambda self, value: self.append(value)
-          return type.__new__(cls, name, bases, attrs)
+          return super().__new__(cls, name, bases, attrs)
       
   # 传入metaclass时，Python解释器在创建Mylist时，要通过 ListMetaclass.__new__()来创建
   class Mylist(list, metaclass=ListMetaclass):
@@ -704,13 +704,9 @@
   @six.add_metaclass(ListMetaclass)
   class Mylist(object):
       pass
-  # 或者(python3中取消了)
-  class Mylist(list):
-      __metaclass__ = ListMetaclass
   ```
-
+  
 - `__class__`：一个实例所属的类；普通对象就是所属的类，普通类就是`type`或`元类`；
-
 
 ## 7.异常、调试和测试
 
@@ -811,7 +807,7 @@ if __name__ == '__main__':
 
 -   `setUp(), tearDown()`：会在每次测试开始和测试结束运行；
 
-## 8.进程和线程
+## 8.进程, 线程, 协程
 
 ### 1.多进程
 
