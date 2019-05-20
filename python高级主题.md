@@ -16,22 +16,26 @@
 
 - 概念:
 
+    - 协程, 任务, Future: 
+        - 协程: 通过`async/await`语法进行声明的;
+        - 任务: 用来在事件循环中运行协程;
+        - Future:
+    - `awaitable`: 可等待对象,  能够在`await`表达式中使用的对象.是具有`__await__()`方法的对象; 主要有三种类型:==协程, 任务, Future==;
     - ==事件循环==: 利用`select, poll, epoll`, 当资源可用时, 向应用代码发出必要的调用;
     - ==Future==: 
     - ==Task==: 
-
     - `await`表达式: 挂起`coroutine`的执行以等待一个`awaitable`对象, 只能在`coroutine function`内使用;`
-    - `awaitable`: 可等待对象,  能够在`await`表达式中使用的对象.可以是`coroutine`或是具有`__await__()`方法的对象; 主要有三种类型:==协程,任务,Future==;
+    - 
     - `async for`: 允许方便地对异步迭代器进行迭代.
     - `sysnc with`: 上下文管理器, 能够在`enter`和`exit`方法中暂停执行;
     - `asynchronous generator`: 异步生成器, 返回异步生成器迭代器,与`async def`定义的协程相似, 不同点在于包含`yield`表达式以产生可以在`async for`循环中使用的值;
     - `asynchronous generator iterator`: 异步生产器迭代器, 属于`asynchronous iterator`, 当使用`__anext__()`方法调用时会返回一个可等待对象来执行异步生成器函数的代码直到下一个`yield`表达式;
 
-- 定义:`async def func()...`
+- 协程的定义:`async def func()...`
 
     - 协程函数内部,能够使用`await, async for, aysnc with`标识符;
     - 协程内部使用`yield from`表达式将引发`SyntaxError`
-    - 调用`coroutine function`返回一个`coroutine object`对象, 协程对象属于`awaitable`对象,;
+    - 调用`coroutine function`返回一个`coroutine object`对象, 协程对象属于`awaitable`对;
 
 - 协程的运行:
 
@@ -41,7 +45,7 @@
 
 - 任务: 可以并发执行协程:
 
-    - `asyncio.create_task()` , python3.7以前可以用`asyncip.ensure_future()`函数;
+    - `asyncio.create_task()` , python3.7加入, python3.7以前可以用`asyncip.ensure_future()`函数;
 
     - ```python
         import asyncio
@@ -49,7 +53,7 @@
             return 42
         
         async def main():
-            task = asyncio.reeate_task(nested())
+            task = asyncio.create_task(nested())
             await task
         ```
 

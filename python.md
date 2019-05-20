@@ -105,6 +105,9 @@
 - 类型的概念是存在于对象中，而不是变量名中；变量是通用的，只是在特定的时间点，简单的引用了一个特定的对象而已；
 - 引用是一种关系，以内存中的指针的形式实现；
 
+- `Cpython`中, 垃圾回收使用的主要算法是引用计数;
+- 弱引用: 不会增加引用数量;
+
 ### 4.特殊语法
 
 - `for...else`: else段在循环自然结束,而不是break时执行, 可以用于清除哨兵变量等操作;
@@ -476,23 +479,6 @@
             pass
         ```
 
-- 直接定义的属性无法做到数据类型，数据范围等的限制，一般需要依靠`get(), set()`函数的帮助；
-
-    -   通过`@property `装饰器可以将一个方法转换为属性调用；
-
-    -   `@property ` 还会创建另一个装饰器`@xxx.setter `；负责把`xxx `方法变成属性赋值，不定义`setter `方法，则该属性就为只读的；
-
-        ```python
-        class A(object):
-            
-            @property
-            def name(self):
-                return self._name
-            
-            @name.setter
-            def name(self, name):
-                self._name = name
-        ```
 
 - 枚举类：通过`Enum `类定义的类型；`value `属性则是自动赋给成员的`int`变量；
 
@@ -542,15 +528,55 @@
 
 - 方法的调用:
 
-- `__get__, __getattr__, __getattribute__, __getitem__`: 
+
+
+### 3.属性管理
+
+- 直接定义的属性无法做到数据类型，数据范围等的限制，需要使用验证属性；
+
+    -   通过`@property `装饰器可以将一个方法转换为属性调用；
+
+    -   `@property ` 还会创建另一个装饰器`@xxx.setter `；负责把`xxx `方法变成属性赋值，不定义`setter `方法，则该属性就为只读的；
+
+        ```python
+        class A(object):
+            
+            # get方法
+            @property
+            def name(self):
+                return self._name
+            
+            # set方法
+            @name.setter
+            def name(self, name):
+                self._name = name
+            
+            # 属性删除
+            @name.deleter
+            def name(self):
+                pass
+        ```
+- `__getattr__, __getattribute__, __getitem__`: 
 
     - `__getitem__`: 实现类似`obj['key']`的运算符重载;
     - `__getattr__`: 实现当属性查询失败时, 自动处理;
     - `__getattribute__`: 无条件实现属性调用, 所有属性调用入口. 用`object.__getattribute__`避免循环调用; 
     
-- `property()`：把特定属性访问定位到get和set处理器函数，也叫特性；
 
-###  3.运算符重载
+- `dir(), getattr(), hasattr(), setattr(), vars()`:
+
+  - `dir`: 列出对象大多数属性;
+  - `getattr()`: 从对象总获取指定属性的值, 不存在时返回异常或默认值;
+
+  - `haattr()`: 是否存在某种属性;
+  - `setattr()`: 将指定属性置为新值;
+  - `vars()`: 返回对象的`__dict__`属性
+
+- 属性描述符
+  - 描述符是实现了特定协议的类,包括`__get__, __set__, __delete__`方法.
+  - 
+
+###  4.运算符重载
 
 - `__getitem__(self, key)` ：使用`x[key]`索引操作符的时候调用;
 
@@ -562,7 +588,7 @@
 
 - `__lt__(), __le__(), __eq__(), __ne__(), __gt__(), __ge__()...`
 
-### 4.python如何实现继承
+### 5.python如何实现继承
 
 > 对于每一个定义的类, python 会计算出一个 方法解析顺序列表(MRO), 这个MRO就是一个简单的所有基类的线性顺序表; 可用 `ClassType.__mro__` 查看,_返回一个元组_. 
 >
@@ -579,7 +605,7 @@
 - 混入(mixin)类是指继承两个或两个以上的类, 并将他们的特性混合在一起;
 - python应避免多重继承;
 
-### 5.特殊方法(魔术方法)
+### 6.特殊方法(魔术方法)
 
 > 类中有很多类似`__xxx__`之类的函数，可以作为钩子，实现特殊的功能, 称为魔术方法；[参考](<https://docs.python.org/zh-cn/3/reference/datamodel.html#basic-customization>)
 
@@ -604,7 +630,7 @@
     - `__getattr__(self, name)`: 定义当用户试图获取一个不存在的属性的行为;
     - `__getattribute__(self, name)`: 属性访问拦截器, 访问类的属性时控制被访问时的行为, **注意避免循环调用**;
     - `__setattr__(self, name, value)`: 定义属性被赋值时的行为;
-    - `__dict__`:  属性字典；
+    - `__dict__`:  对象的属性字典;
     - `__dir__()`:  在`dir()`被调用时调用
         - `dir()`:返回包含属性的列表, 如果对象提供`__dir__()`方法，直接使用， 除此使用`dir()`逻辑, 包含实例的属性，类的属性和递归基类的属性; 
 - 上下文管理器
@@ -682,7 +708,7 @@
 >
 > 主要用途: 创建API, 例如 Django的ORM, 
 >
-> `__new__(cls, ...)`, 负责创建类实例的静态方法：`cls`, 需要创建实例的类；
+> `__new__(cls, ...)`, 负责创建类实例的类方法：`cls`, 需要创建实例的类；
 
 - 用class语句创建的每个类都隐式地使用`type`作为其元类,  即类都是通过`type`构建的. `class`语句默认提供`class Test(metaclass=type):...`, *type创建类*;
 - `type(name, bases, dict)`: *name* 字符串即类名并且会成为 [`__name__`](https://docs.python.org/zh-cn/3/library/stdtypes.html#definition.__name__) 属性；*bases* 元组列出基类并且会成为 [`__bases__`](https://docs.python.org/zh-cn/3/library/stdtypes.html#class.__bases__) 属性；而 *dict* 字典为包含类主体定义的命名空间并且会被复制到一个标准字典成为 [`__dict__`](https://docs.python.org/zh-cn/3/library/stdtypes.html#object.__dict__) 属性 
@@ -708,7 +734,7 @@
   
 - `__class__`：一个实例所属的类；普通对象就是所属的类，普通类就是`type`或`元类`；
 
-## 7.异常、调试和测试
+## 10.异常、调试和测试
 
 > 在函数出错时，c往往会通过返回值表示是否发生错误，这导致正确结果和错误代码混和，一旦出错，还要一级一级上报；所以一般高级语言通常都内置了一套`try...except...finally...`的错误处理机制；
 
@@ -807,7 +833,7 @@ if __name__ == '__main__':
 
 -   `setUp(), tearDown()`：会在每次测试开始和测试结束运行；
 
-## 8.进程, 线程, 协程
+## 7.进程, 线程, 协程
 
 ### 1.多进程
 
@@ -885,6 +911,12 @@ if __name__=='__main__':
 
 - `threading.current_thread()`: 返回当前线程对象;
 - `threading.enumerate()`: 返回所有线程列表;
+
+
+
+## 8.性能
+
+
 
 ## 9.编码方式
 
