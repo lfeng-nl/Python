@@ -306,7 +306,31 @@ x, y = p0
 
 ### 2.开始
 
+# III Python代码风格
 
 
-****### 
+
+## 1.代码检查工具
+
+## 2.定制
+
+## 3.易错风格
+
+- E128: 延续线下缩进视觉缩进, 该行字符太多时需要进行折叠:
+
+  ```python
+  a = test('abcdef', 'abcdef', 'abcdef', 'abcdef')
+  # 括号内有内容, 缩进到括号
+  a = test('abcdef',
+           'abcdef', 'abcdef', 'abcdef')
+  # 括号内无内容, 统一缩进
+  a = test(
+  	'abcdef', 'abcdef', 'abcdef', 'abcdef')
+  ```
+
+  
+
+- E711: `if info is None:`或`if not info is None`: 跟`None`的比较应用`is`;
+
+- 
 
