@@ -2,9 +2,25 @@
 
 ---
 
-## 1.异步IO
+## 1.asyncio
 
 > 参考: [深入理解python异步编程](<https://mp.weixin.qq.com/s?__biz=MzIxMjY5NTE0MA==&mid=2247483720&idx=1&sn=f016c06ddd17765fd50b705fed64429c>) [深入理解Python异步编程](<https://mp.weixin.qq.com/s?__biz=MjM5MzgyODQxMQ==&mid=2650370139&idx=1&sn=e4402260d852facb6f3d33ec20ed2be5&chksm=be9ccb0f89eb4219d986b1f15347f226a726f0da34aecbd593c0f61038e65f48d5334aeb2ca3&mpshare=1&scene=1&srcid=&pass_ticket=gLwNW%2BUgDzD3eMKuOQblqsLb05KdJis8nSFBCKEJffXeWuJIDpxEUQiUkGl74q2y#rd>)
+
+### 1.基础概念
+
+- 事件循环: asyncio应用的核心, 事件循环会运行异步任务和回调, 执行网络IO,运行子进程;
+
+    ```python
+    while True:
+        # self._run_one() 调用当前准备好的回调
+    	self._run_once()
+    	if self._stopping:
+    		break
+    ```
+
+    - `_scheduled`: 存放`TimeHeadle`, 堆结构;
+    - `_ready`: 存放`Headle`, 堆结构, 每次执行`_run_once()`更新`_ready`, 然后遍历并调用`handle._run()`;
+    - `self._process_events()`: 处理selector事件;
 
 ### 1.协程 coroutine, [参考](https://docs.python.org/zh-cn/3.7/library/asyncio-task.html)
 
@@ -22,8 +38,8 @@
         - Future:
     - `awaitable`: 可等待对象,  能够在`await`表达式中使用的对象.是具有`__await__()`方法的对象; 主要有三种类型:==协程, 任务, Future==;
     - ==事件循环==: 利用`select, poll, epoll`, 当资源可用时, 向应用代码发出必要的调用;
-    - ==Future==: 
-    - ==Task==: 
+    - ==Future==:  一个数据结构, 表示还未完成打工作结构;
+    - ==Task==: 是Future的一个子类, 任务所需资源可用时, 事件循环会调度任务;
     - `await`表达式: 挂起`coroutine`的执行以等待一个`awaitable`对象, 只能在`coroutine function`内使用;`
     - 
     - `async for`: 允许方便地对异步迭代器进行迭代.
@@ -306,15 +322,56 @@ x, y = p0
 
 ### 2.开始
 
+## 9.heapq
+
+> 堆排序
+
+
+
 # III Python代码风格
+
+> [PEP8: Python代码样式指导](<https://www.python.org/dev/peps/pep-0008/>);
+>
+> 
 
 
 
 ## 1.代码检查工具
 
-## 2.定制
+### 1.flake8 [doc](<http://flake8.pycqa.org/en/latest/>)
 
-## 3.易错风格
+- 安装`pip install flake8`
+- `flake8 file.py`
+- 配置: 
+
+### 2.pycodestyle [doc](<https://pycodestyle.readthedocs.io/en/latest/intro.html#id3>)
+
+- 根据PEP8样式检查Python代码是否符合;
+
+- 安装`pip install pycodestyle`
+- `pycodestyle file.py`
+
+### 3.Pylint [doc](<https://pylint.readthedocs.io/en/latest/>)
+
+- 安装`pip install pylint`
+- [错误参考](<http://pylint-messages.wikidot.com/all-messages>)
+
+## 2.风格
+
+### 1.命名风格
+
+- 常量: 大写加下划线,`SQL_USER`
+- 函数和方法: 小写加下划线`function_name`
+- 私有元素: 双下环线开头;
+- 参数: 小写加下划线;
+- 类: 驼峰式命名;
+- 模块和包: 都使用小写, 不带下划线;
+- 命名指南:
+    - 用`has`或`is`前缀命名布尔元素;
+    - 用复数形式命名集合, 如`tables`;
+    - 避免现有名称;
+
+### 2.易错格式
 
 - E128: 延续线下缩进视觉缩进, 该行字符太多时需要进行折叠:
 

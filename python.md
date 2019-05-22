@@ -365,6 +365,7 @@
 
 
 - 包的搜索路径：`sys.path`，查看python包搜索的路径；
+- 当前导入打模块都在`sys.module`中;
 - 修改搜索路径：
   - 1.直接修改`sys.path: sys.path.append('/usr/....``')`
   - 2.设置环境变量`PYTHONPATH`，该环境变量会自动添加到搜索路径中`export PYTHONPATH=xxx`。
@@ -562,7 +563,6 @@
     - `__getattr__`: 实现当属性查询失败时, 自动处理;
     - `__getattribute__`: 无条件实现属性调用, 所有属性调用入口. 用`object.__getattribute__`避免循环调用; 
     
-
 - `dir(), getattr(), hasattr(), setattr(), vars()`:
 
   - `dir`: 列出对象大多数属性;
