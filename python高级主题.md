@@ -18,9 +18,21 @@
     		break
     ```
 
-    - `_scheduled`: 存放`TimeHeadle`, 堆结构;
-    - `_ready`: 存放`Headle`, 堆结构, 每次执行`_run_once()`更新`_ready`, 然后遍历并调用`handle._run()`;
-    - `self._process_events()`: 处理selector事件;
+    - `self._run_once()`: 关键信息
+      - `_scheduled`: 存放`TimeHeadle`, 堆结构;
+      - `_ready`: 存放`Headle`, 堆结构, 每次执行`_run_once()`更新`_ready`, 然后遍历并调用`handle._run()`;
+      - `_process_events()`: 处理selector事件;
+    - 每个进程中仅有一个事件循环, 可以通过`get_event_loop, set_event_loop`获取或设置;
+    - `create_task()`: 安排一个协程执行, 返回一个Task对象;
+    
+- Future:用来链接底层回调式代码和高层异步/等待式代码
+
+    - `asyncio.isfuture`: 如果是`Future, Task, self._asyncio_future_blocking`返回`True`
+    - `asyncio.ensure_future(coro_or_future, *)`:  对`coro_or_future`进行判断转换;
+
+- Task:
+
+    - 
 
 ### 1.协程 coroutine, [参考](https://docs.python.org/zh-cn/3.7/library/asyncio-task.html)
 
@@ -324,9 +336,24 @@ x, y = p0
 
 ## 9.heapq
 
-> 堆排序
+> 堆队列算法, python提供的是最小堆, 方便取出最小值, 使用list实现;
 
+- `heapq.heappush(heap,item)`: 将值加入堆中;
+- `heapq.heappop(heaap)`: 弹出并返回最小元素;
+- `heapq.heapify(x)`: 将list原地转换为堆;
 
+- 用法:
+
+  ```python
+  heap = []            # creates an empty heap
+  heapq.heappush(heap, item) # pushes a new item on the heap
+  item = heapq.heappop(heap) # pops the smallest item from the heap
+  item = heap[0]       # smallest item on the heap without popping it
+  heapq.heapify(x)           # transforms list into a heap, in-place, in linear time
+  item = heapq.heapreplace(heap, item) # pops and returns smallest item, and adds new item; the heap size is unchanged
+  ```
+
+  
 
 # III Python代码风格
 
