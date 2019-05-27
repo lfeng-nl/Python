@@ -19,11 +19,12 @@
     ```
 
     - `self._run_once()`: 关键信息
-      - `_scheduled`: 存放`TimeHeadle`, 堆结构;
-      - `_ready`: 存放`Headle`, 堆结构, 每次执行`_run_once()`更新`_ready`, 然后遍历并调用`handle._run()`;
+      - `_scheduled`列表: 存放`TimeHeadle`, 堆结构;
+      - `_ready`列表: 存放`Headle`, 堆结构, 每次执行`_run_once()`更新`_ready`, 然后遍历并调用`handle._run()`;
       - `_process_events()`: 处理selector事件;
     - 每个进程中仅有一个事件循环, 可以通过`get_event_loop, set_event_loop`获取或设置;
     - `create_task()`: 安排一个协程执行, 返回一个Task对象;
+    - `call_soon()`: 将`callback`初始化为`events.Handle`, 添加到`_ready`列表中;
     
 - Future:用来链接底层回调式代码和高层异步/等待式代码
 
@@ -32,7 +33,12 @@
 
 - Task:
 
-    - 
+    - 继承自`Future`, 被用来设置日程以便并发执行协程;
+    - 通过`asyncio.create_task()`等函数将协程打包为一个任务, 该协程自动排入日程准备立即运行;
+      - `Task()`初始化时, 1.执行`self._loop.call_soon(self.__step, context=self._context)`将 `self.__step` 加入` loop._redy`, 2.通过`_register_task(self)`注册到全局;
+
+- `awaitable`: 可等待对象,  能够在`await`表达式中使用的对象.是具有`__await__()`方法的对象; 主要有三种类型:==协程, 任务, Future==;
+- `await`表达式: 挂起`coroutine`的执行以等待一个`awaitable`对象, 只能在`coroutine function`内使用;`
 
 ### 1.协程 coroutine, [参考](https://docs.python.org/zh-cn/3.7/library/asyncio-task.html)
 
@@ -42,23 +48,6 @@
 
 ==*python中协程最早是基于生成器实现,  使用`yield from`语句,对基于生成器的协程的支持 **已弃用** 并计划在 Python 3.10 中移除。*==
 
-- 概念:
-
-    - 协程, 任务, Future: 
-        - 协程: 通过`async/await`语法进行声明的;
-        - 任务: 用来在事件循环中运行协程;
-        - Future:
-    - `awaitable`: 可等待对象,  能够在`await`表达式中使用的对象.是具有`__await__()`方法的对象; 主要有三种类型:==协程, 任务, Future==;
-    - ==事件循环==: 利用`select, poll, epoll`, 当资源可用时, 向应用代码发出必要的调用;
-    - ==Future==:  一个数据结构, 表示还未完成打工作结构;
-    - ==Task==: 是Future的一个子类, 任务所需资源可用时, 事件循环会调度任务;
-    - `await`表达式: 挂起`coroutine`的执行以等待一个`awaitable`对象, 只能在`coroutine function`内使用;`
-    - 
-    - `async for`: 允许方便地对异步迭代器进行迭代.
-    - `sysnc with`: 上下文管理器, 能够在`enter`和`exit`方法中暂停执行;
-    - `asynchronous generator`: 异步生成器, 返回异步生成器迭代器,与`async def`定义的协程相似, 不同点在于包含`yield`表达式以产生可以在`async for`循环中使用的值;
-    - `asynchronous generator iterator`: 异步生产器迭代器, 属于`asynchronous iterator`, 当使用`__anext__()`方法调用时会返回一个可等待对象来执行异步生成器函数的代码直到下一个`yield`表达式;
-
 - 协程的定义:`async def func()...`
 
     - 协程函数内部,能够使用`await, async for, aysnc with`标识符;
@@ -67,9 +56,11 @@
 
 - 协程的运行:
 
-    - `asyncio.run(async_function())`: 运行传入的协程对象;
-    - `await async_function()`: 等待一个协程执行; 
+    - `asyncio.run(async_function(xx))`: 运行传入的协程对象;
+      - 底层通过获取事件循环, 调用`loop.run_until_complete()`执行;
     - `task = asyncio.create_task(async_function())`: 将协程对象转换为`asyncio.Task()`对象;
+      - 调用`loop.create_task()`实力化任务;
+    - `await async_function()`: 等待一个协程执行; 
 
 - 任务: 可以并发执行协程:
 
@@ -88,15 +79,6 @@
     - `cancel()`: 请求取消`Task`对象
 
     - `add_done_callback()`: 添加一个回调;
-
-- `Future`对象:
-
-    - 低层级的可等待对象, 表示一个异步操作的最终结果.
-
-        ```python
-        async def main():
-            await function_that_returns_a_future_object()
-        ```
 
 - 并发运行任务:
 
