@@ -117,6 +117,8 @@
 
 ### 4.特殊语法
 
+- `range(start, stop, step)`: 默认开始为`0`, 默认步长为`1`; 需要逆序时, 注意步长设置为负; 
+
 - `for...else`: else段在循环自然结束,而不是break时执行, 可以用于清除哨兵变量等操作;
 - `with`: 上下文管理器, 可作用于含有`__enter__(self), __exit__(self，exc_type, exc_value, traceback)`的对象;
   - 执行过程: 调用`__enter__()`,任何返回值都会绑定到`as`子句 --> 执行代码块 --> 调用`__exit__()`;
