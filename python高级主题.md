@@ -335,7 +335,13 @@ x, y = p0
   item = heapq.heapreplace(heap, item) # pops and returns smallest item, and adds new item; the heap size is unchanged
   ```
 
-  
+
+## 10.functools
+
+> 调整或扩展函数和`callable`对象
+
+- `functools.partial(func, *args, **kwargs)`:  偏函数, 基于func生成新函数, 固定某些参数, 从而生成一个新的函数;
+- 
 
 # III Python代码风格
 
