@@ -714,16 +714,19 @@
 
 > **重要**: `type`创建类, `__new__()`创建实例;
 >
-> 元类就是用来创建类的“东西”, 像类是用来创建实例一样, 元类就是用来创建类的.例如`type`就是一个内建的元类: `type(name, bases, dict)`,
+> 元类就是用来创建类的类, 像类是用来创建实例一样, 元类就是用来创建类的.例如`type`就是一个内建的元类: `type(name, bases, dict)`,
 >
-> 元类本身: 1.拦截类的创建, 2. 修改类, 3.返回修改之后的类;
+> 元类本身: 1.在定义类的时候, 调用该类的元类, 2.可以拦截类的创建, 3. 修改类的属性等操作,  4.返回修改之后的类;
 >
 > 主要用途: 创建API, 例如 Django的ORM, 
 >
 > `__new__(cls, ...)`, 负责创建类实例的类方法：`cls`, 需要创建实例的类；
 
-- 用class语句创建的每个类都隐式地使用`type`作为其元类,  即类都是通过`type`构建的. `class`语句默认提供`class Test(metaclass=type):...`, *type创建类*;
-- `type(name, bases, dict)`: *name* 字符串即类名并且会成为 [`__name__`](https://docs.python.org/zh-cn/3/library/stdtypes.html#definition.__name__) 属性；*bases* 元组列出基类并且会成为 [`__bases__`](https://docs.python.org/zh-cn/3/library/stdtypes.html#class.__bases__) 属性；而 *dict* 字典为包含类主体定义的命名空间并且会被复制到一个标准字典成为 [`__dict__`](https://docs.python.org/zh-cn/3/library/stdtypes.html#object.__dict__) 属性 
+- 用`class`语句创建的每个类都隐式地使用`type`作为其元类,  即类都是通过`type`构建的. `class`语句默认提供`class Test(metaclass=type):...`, *type创建类*;
+- `type(name, bases, dict)`: 
+    - *name* 字符串即类名并且会成为 [`__name__`](https://docs.python.org/zh-cn/3/library/stdtypes.html#definition.__name__) 属性；
+    - *bases* 元组列出基类并且会成为 [`__bases__`](https://docs.python.org/zh-cn/3/library/stdtypes.html#class.__bases__) 属性；
+    - 而 *dict* 字典为包含类主体定义的命名空间并且会被复制到一个标准字典成为 [`__dict__`](https://docs.python.org/zh-cn/3/library/stdtypes.html#object.__dict__) 属性 
 
 
 - ```python

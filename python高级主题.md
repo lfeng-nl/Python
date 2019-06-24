@@ -358,6 +358,10 @@ x, y = p0
 - `functools.partial(func, *args, **kwargs)`:  偏函数, 基于func生成新函数, 固定某些参数, 从而生成一个新的函数;
 - 
 
+## 11.inspect
+
+
+
 # III Python代码风格
 
 > [PEP8: Python代码样式指导](<https://www.python.org/dev/peps/pep-0008/>);
