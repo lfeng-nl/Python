@@ -47,6 +47,8 @@
 
 - `D.get('key', default=None)`：获取一个键的值，不存在不会抛出异常，返回默认值；
 
+- `D.update(E)`: 更新D, `for k in E: D[k] = F[k]` 
+
 - **字典是无序的，哈希表**: 只有**可哈希的**对象才可以作为字典的键, 实现`__hash__(), __eq__()`两个方法;
 
   > 扩展: 解决哈希冲突
@@ -1109,6 +1111,10 @@ if __name__=='__main__':
 
 - `itertools.chain()`:  将多个可迭代对象整合为一个迭代器,
 
-## III.说明
+## III.Python2和Python3不同点
 
-- 元对象: 指那些对构建语言本身来说很重要的对象,
+- `print`语句
+- 类, python2是旧式类, 需要显式继承`object`,  python3是新式类;
+- 字符串类型: python2是`str, Unicode`, python3是`bytes, str`;
+
+- 除法结果: python2中是整形, python3中是浮点型;
