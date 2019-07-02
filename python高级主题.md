@@ -8,7 +8,7 @@
 
 ### 1.基础概念
 
-- 事件循环: asyncio应用的核心, 事件循环会运行异步任务和回调, 执行网络IO,运行子进程;
+- **事件循环**: asyncio应用的核心, 事件循环会运行异步任务和回调, 执行网络IO,运行子进程;
 
     ```python
     while True:
@@ -18,35 +18,38 @@
     		break
     ```
 
-    - `self._run_once()`: 关键信息
+    - `self._run_once()`: 
       - `_scheduled`列表: 存放`TimeHeadle`, 堆结构;
       - `_ready`列表: 存放`Headle`, 堆结构, 每次执行`_run_once()`更新`_ready`, 然后遍历并调用`handle._run()`;
       - `_process_events()`: 处理selector事件;
     - 每个进程中仅有一个事件循环, 可以通过`get_event_loop, set_event_loop`获取或设置;
-    - `create_task()`: 安排一个协程执行, 返回一个Task对象;
     - `call_soon()`: 将`callback`初始化为`events.Handle`, 添加到`_ready`列表中;
     
-- Future:用来链接底层回调式代码和高层异步/等待式代码
+- **可等待对象**:   能够在`await`语句中使用的对象. 是具有`__await__()`方法的对象; 
 
+    - **`await`表达式**: 
+        - 挂起协程的执行以等待一个`awaitable`对象, 直到被等待对象执行完毕, 协程才能继续执行;
+        - 只能在`coroutine function`内使用;
+    - 主要有三种类型: **协程, 任务, Future**;
+    - **协程**: 通过`async def`定义的函数;
+    - **任务**: 用来设置日程以便并发执行协程, 例如`asyncio.create_task()`将协程打包为一个任务;
+    - `Future`: 特殊的低层级可等待对象, 表示一个异步操作的最终结果;
+
+- **Task**:
+    - 继承自`Future`, 被用来设置日程以便并发执行协程;
+    - 通过`asyncio.create_task()`等函数将协程打包为一个任务, 该协程自动排入日程准备立即运行;
+    - 可以使用`cancel()`方法取消任务;
+- **Future**: 用来链接底层回调式代码和高层异步/等待式代码
     - `asyncio.isfuture`: 如果是`Future, Task, self._asyncio_future_blocking`返回`True`
     - `asyncio.ensure_future(coro_or_future, *)`:  对`coro_or_future`进行判断转换;
 
-- Task:
-
-    - 继承自`Future`, 被用来设置日程以便并发执行协程;
-    - 通过`asyncio.create_task()`等函数将协程打包为一个任务, 该协程自动排入日程准备立即运行;
-      - `Task()`初始化时, 1.执行`self._loop.call_soon(self.__step, context=self._context)`将 `self.__step` 加入` loop._redy`, 2.通过`_register_task(self)`注册到全局;
-
-- `awaitable`: 可等待对象,  能够在`await`表达式中使用的对象.是具有`__await__()`方法的对象; 主要有三种类型:==协程, 任务, Future==;
-- `await`表达式: 挂起`coroutine`的执行以等待一个`awaitable`对象, 只能在`coroutine function`内使用;`
-
-### 1.协程 coroutine, [参考](https://docs.python.org/zh-cn/3.7/library/asyncio-task.html)
+### 2.协程 coroutine, [参考](https://docs.python.org/zh-cn/3.7/library/asyncio-task.html)
 
 > 让原先需要用异步+回调方式写的代码可以用看似同步的方式写出来, 协程由于不需要线程切换开销,也不需要锁机制, 具有较高的效率.
 >
 > Python协程可以在多个位置上挂起和恢复执行. python最开始通过生成器[PEP342](https://www.python.org/dev/peps/pep-0342/)实现协程, 并通过[PEP380](https://www.python.org/dev/peps/pep-0380/)引入`yield from`进行增强; 后引入`PEP492`引入新的语法声明协程:`async def`, 协程函数可以包含`await, async for, sysnc with`关键字
 
-==*python中协程最早是基于生成器实现,  使用`yield from`语句,对基于生成器的协程的支持 **已弃用** 并计划在 Python 3.10 中移除。*==
+>  **python中协程最早是基于生成器实现,  使用`yield from`语句,对基于生成器的协程的支持 已弃用并计划在 Python 3.10 中移除。**
 
 - 协程的定义:`async def func()...`
 
@@ -54,54 +57,46 @@
     - 协程内部使用`yield from`表达式将引发`SyntaxError`
     - 调用`coroutine function`返回一个`coroutine object`对象, 协程对象属于`awaitable`对;
 
-- 协程的运行:
+- 运行任务或协程:
 
     - `asyncio.run(async_function(xx))`: 运行传入的协程对象;
+      
       - 底层通过获取事件循环, 调用`loop.run_until_complete()`执行;
-    - `task = asyncio.create_task(async_function())`: 将协程对象转换为`asyncio.Task()`对象;
-      - 调用`loop.create_task()`实力化任务;
+      
     - `await async_function()`: 等待一个协程执行; 
 
-- 任务: 可以并发执行协程:
+    - `await task`: 等待一个任务执行; 
 
-    - `asyncio.create_task()` , python3.7加入, python3.7以前可以用`asyncip.ensure_future()`函数;
+    - 并发执行: `asyncio.gather(*aws, loop=None, return_exceptions=False)`: 并发运行`aws`序列中的可等待对象;
 
-    - ```python
-        import asyncio
-        async def nested():
-            return 42
-        
-        async def main():
-            task = asyncio.create_task(nested())
-            await task
-        ```
+        - ```python
+            async def test(name, number):
+                await asyncio.sleep(number)
+                print('Task %s ok!' % name)
+                
+            async def main():
+                await asyncio.gater(
+                	test('A', 4),
+                    test('B', 3),
+                    test('C', 2),
+                    test('D', 1),
+                )
+            ```
 
-    - `cancel()`: 请求取消`Task`对象
+- `asyncio.wait_for(aw, timeout)`: 返回协程, 超时等待;
 
-    - `add_done_callback()`: 添加一个回调;
-
-- 并发运行任务:
-
-    - ```python
-        async def test(name, number):
-            await asyncio.sleep(number)
-            print('Task %s ok!' % name)
-            
-        async def main():
-            await asyncio.gater(
-            	test('A', 4),
-                test('B', 3),
-                test('C', 2),
-                test('D', 1),
-            )
-        ```
-
-- `asyncip.wait_for()`: 等待超时;
+- `asyncio.wait(aws, timeout, return)`: 返回协程,  并发等待, 可以设置超时和返回条件;
 
 - 异步迭代器: 可以在其`__anext__`方法中调用异步代码, 由 [**PEP 492**](https://www.python.org/dev/peps/pep-0492) 引入。
 
     - 可以在`async for`语句中使用;
     - 实现了 `__aiter__()`和 `__anext__()` 方法的对象。`__anext__` 必须返回一个 `awaitable`
+
+### 3.协程调试
+
+- 将`PYTHONASYNCIODEBUG`环境变量设为1;
+- `asyncio.run(debug=True)`;
+- 调用`loop.set_debug()`
 
 ## 2.Python函数式编程
 
