@@ -817,36 +817,54 @@ if __name__ == '__main__':
 
 >   "测试驱动开发 TDD"；单元测试是用来对一个模块、一个函数或者一个类来进行正确性检验的测试工作。这种以测试为驱动的开发模式最大的好处就是确保一个程序模块的行为符合我们设计的测试用例，在将来修改的时候，可以极大程度地保证该模块行为的正确性；
 
--   编写单元测试，需要引入python自带的`unittest`模块；
+- 编写单元测试，需要引入python自带的`unittest`模块；
 
     ```python
     # 导入单元测试模块
     import unittest
-
+    
     #编写测试类，需要从 unittest.TestCase 继承
     class TestDict(unittest.TestCase):
-    	# 每一个测试方法必须以test开头，类似`test_xxx()`形式命名
+        
+        # 类方法, 所有测试用例调用前调用
+        @classmethod
+        def setUpClass(cls):
+            pass
+        
+        # 类方法, 所有测试用例调用后调用
+        @classmethod
+        def tearDownClas(cls):
+            pass
+        
+        # setUP, 可以用来完成前置工作, 每个测试用例前调用. 如果发生异常, 则测试方法不会被运行;
+        def setUp(self):
+            pass
+        
+        # tearDown, 测试结束后进行清理, 每个测试用例后调用. 如果setUp运行, 无论是否成功, 都会运行 tearDown
+        def tearDown(self):
+            pass
+    
+    	# 每一个测试方法必须以test开头，类似`test_xxx()`形式命名, 内部使用TestCase提供的断言方法, 例如assertEqual 进行测试
         def test_init(self):
             d = list(range(10))
-            # 判断，是否相等，TestCase内置了许多测试类型
             self.assertEqual(d[0], 0)
             self.assertEqual(d[2], 2)
+            
+            
+    if __name__ == '__main__':
+        # main 使用 TextTestRunner 运行所有测试用例 
+        unittest.main()
     ```
 
--   测试方式：
+-   概念:
 
-    -   1.把单元测试做为脚本运行
-
-        ```python
-         if name=='main':
-            unittest.main()
-        ```
-
-    -   2.在命令行通过参数`-m unittest xxxx`直接运行;
-
-    -   测试通过或打印`ok`；失败会返回`FAIL`和错误位置；
-
--   `setUp(), tearDown()`：会在每次测试开始和测试结束运行；
+    -   测试脚手架: 开展测试所需的准备工作, 以及所有相关的清理操作; 例如`setUpClass, tearDownClass, setUp, tearDown, `;
+-   测试用例: 以`test`开头的方法, 可以 调用`asserEqual,asserNotEqual, assertTure, assertFalse... `
+    -   测试套件:  `TestSuite`, 可以对测试用例进行组合排序;
+        -   `addTest(test)`: 添加一个测试用例到`TestSuite`; 批量添加`addTests(tests)`;
+        -   `run(result)`: 运行测试套件;
+    -   测试运行器:  `TextTestRunner`, 运行测试用例或测试套件, 结果以文本的形式打印;
+-   测试结果: `TestResult` 用于存储测试结果;
 
 ## 7.进程, 线程, 协程
 
