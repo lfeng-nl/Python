@@ -1,2 +1,6 @@
-##说明
-本文用于记录python学习过程。
+## 说明
+python学习记录, 目前包括:
+
+1. python基础
+2. python高级主题及模块学习
+3. cpython源码学习
