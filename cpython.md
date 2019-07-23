@@ -7,18 +7,18 @@
 > ```c
 > /* object.h */
 > typedef struct _object {
->     _PyObject_HEAD_EXTRA
->     // 引用计数
->     Py_ssize_t ob_refcnt;
->     // 类型相关
->     struct _typeobject *ob_type;
+>       _PyObject_HEAD_EXTRA
+>       // 引用计数
+>       Py_ssize_t ob_refcnt;
+>       // 类型相关
+>       struct _typeobject *ob_type;
 > } PyObject;
 > 
 > /* 可变长对象 */
 > typedef struct {
->     PyObject ob_base;
->     // 对象长度, 例如int类型, 记录需要 digit 个数
->     Py_ssize_t ob_size;
+>       PyObject ob_base;
+>       // 对象长度, 例如int类型, 记录需要 digit 个数
+>       Py_ssize_t ob_size;
 > } PyVarObject;
 > 
 > ```
@@ -81,8 +81,8 @@
     
 - `tp_dealloc`和`tp_free`:
 
-    - `tp_dealloc`:
-    - `tp_free`:低层级对象销毁函数;
+    - `tp_dealloc`: 析构函数
+    - `tp_free`:低层级对象销毁函数, 一般会在`tp_dealloc`中被调用;
 
 ### 2.内置类型
 
@@ -195,40 +195,57 @@ PyTypeObject PyUnicode_Type = {
 };
 ```
 
-
-
 #### 3.List
+
+> `PyListObject`, 实现方式是数组, 会预先申请一部分内存
 
 ```c
 // list对象
 typedef struct {
     PyObject_VAR_HEAD
+        
     /* 指向PyObject数组的指针 */
     PyObject **ob_item;
 
-    /* allocated:申请的总空间,  ob_size 表示当前已使用空间 */
+    /* allocated:申请的总空间,  ob_size 表示当前已使用空间(len()获取的值) */
     Py_ssize_t allocated;
 } PyListObject;
 
 PyTypeObject PyList_Type = {
     PyVarObject_HEAD_INIT(&PyType_Type, 0)
     "list",
+    // 需要申请的object的空间大小
     sizeof(PyListObject),
-    // 
+    // 列表对象析构函数
     (destructor)list_dealloc,                   /* tp_dealloc */
 	// 迭代相关函数
     &list_as_sequence,                          /* tp_as_sequence */
-    &list_as_mapping,                           /* tp_as_mapping */
-    PyObject_HashNotImplemented,                /* tp_hash */
     
-    (initproc)list___init__,                    /* tp_init */
     PyType_GenericAlloc,                        /* tp_alloc */
     PyType_GenericNew,                          /* tp_new */
+    // 释放空间函数
     PyObject_GC_Del,                            /* tp_free */
 };
 ```
 
+- `PyListObject`对象创建:
+  - 只能通过`PyList_New()`函数创建;
+  - 需要申请两部分内存: 1.`PyListObject`本身, 2.`ob_item`指向的内存;
+  - 实际数组(*`ob_item`指向的内存*)中存放的是元素的指针;
+  - `PyListObject`自身内存空间申请, 会先使用`free_list[PyList_MAXFREELIST]`缓冲池中的对象,  以减少`malloc`和`free`的调用, 如果缓存已用完, 再使用`ob_type->tp_basicsize`大小, 申请空间; 
 
+- `PyListObject`对象销毁:
+  - 变量销毁`ob_item`中的元素, 然后释放`ob_item`指向的空间;
+  - 如果`free_list[]`未满, 则将药销毁的`PyListObject`加入列表(静态变量`numfree`记录数据中当前元素数量);
+  - 如果`free_list[]`已满, 则调用`tp_free`释放空间;
+- `list`对象方法:
+  - `append`: 实现是`PyList_Append()`:
+    - 首先会进行**合法性判断**, 然后判定是否需要**重新申请空间**, 最后增加被添加对象的**引用计数**, 并将值**添加**到尾端;
+    - `ob_item`指向的空间会按照类似`new_allocated = newsize + (newsize >> 3) + (newsize < 9 ? 3 : 6);`的策略进行预分配;
+  - `insert`: 实现是`PyList_Insert()`:
+    - 1.按照`ob_size+1`调整大小, 2.插入位置后的元素后移, 3.插入元素;
+- **注意点**:
+  - `list`元素个数由`ob_size`存储, 大小由其类型限制, 所以存在容量限制;
 
 #### 4.Dict
 
