@@ -249,22 +249,43 @@ PyTypeObject PyList_Type = {
 
 #### 4.Dict
 
+> 基于哈希表, 冲突解决方式为: **开放寻址**;
+
 ```c
 // dict
 typedef struct {
     PyObject_HEAD
-
     // 已使用 item 数量
     Py_ssize_t ma_used;
-
     // 全局唯一, 每次修改字典都会更改
     uint64_t ma_version_tag;
-
     PyDictKeysObject *ma_keys;
-
     // 如果 ma_values==NULL, key和value在ma_keys; 否则分别存储
     PyObject **ma_values;
 } PyDictObject;
+
+
+typedef struct {
+    // me_hash, me_key的哈希值
+    Py_hash_t me_hash;
+    PyObject *me_key;
+    PyObject *me_value;
+} PyDictKeyEntry;
+
+// key对象的定义, PyDictKeysObject, typedef struct _dictkeysobject PyDictKeysObject;
+struct _dictkeysobject {
+    Py_ssize_t dk_refcnt;
+    // 哈希表(dk_indices)的大小, 2的整数倍
+    Py_ssize_t dk_size;
+    // key查找函数
+    dict_lookup_func dk_lookup;
+    // dk_entries 可使用条目数
+    Py_ssize_t dk_usable;
+    // dk_entries 使用的条目数
+    Py_ssize_t dk_nentries;
+    // 哈希表
+    char dk_indices[];
+};
 
 PyTypeObject PyDict_Type = {
     PyVarObject_HEAD_INIT(&PyType_Type, 0)
@@ -310,7 +331,12 @@ PyTypeObject PyDict_Type = {
 };
 ```
 
-
+- `PyDictObject`对象的创建, `PyDict_New()`:
+    - 首先尝试获取未释放的对象,  没有, 则新申请`PyDictObject`对象`mp`;
+    - 初始化`mp->ma_keys, mp->ma_values`,  `ma_keys`会被初始化为一个`empty_keys_struct`, 增加全局计数;
+- 元素搜索:
+- 元素插入:
+- `pydict_global_version`: 全局计数;
 
 *******
 
