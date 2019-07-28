@@ -1,3 +1,15 @@
+> 主要参考: [栖迟于一丘](https://www.hongweipeng.com/index.php/series.html), [CPython Internals](<https://github.com/rainyear/CPython-Internals-Lecture-Notes>)
+>
+> 工具: [visualize](<http://www.pythontutor.com/visualize.html#mode=edit>)
+>
+> 主要源码文件:
+>
+> Include/, 相关头文件;
+>
+> Objects/, 定义Python内置类型;
+>
+> Python/, Python解释器运行时程序;
+
 ## 1.对象
 
 > 对象的基础是类型`PyObject`, 但是多有对象都不是由其直接实现, 而是由类似`PyVarObject`这样的结构, 但是所有对象都可以强制转换为`PyObject 类型`,  也是一种继承机制;
@@ -250,6 +262,37 @@ PyTypeObject PyList_Type = {
 #### 4.Dict
 
 > 基于哈希表, 冲突解决方式为: **开放寻址**;
+>
+> 哈希表空间结构:
+>
+> ```c
+> +---------------+
+> | dk_indices    | --> 存放 索引, DKIX_EMPTY, DKIX_DUMMY; (DKIX_EMPTY=-1, DKIX_DUMMY=-2)
+> | -   -   -   - |
+> | x,x,x,x,x,x,x |
+> +---------------+
+> | dk_entries    | --> PyDictKeyEntry 的数组
+> | -   -   -   - |
+> |PyDictKeyEntry,|
+> |PyDictKeyEntry,|
+> |PyDictKeyEntry,|
+> |PyDictKeyEntry,|
+> +---------------+
+> 
+> ```
+>
+> 1. `dk_size`: 哈希表的大小, `dk_indices`中索引的总个数;
+> 2. 索引类型是根据` dk_size`大小来确定,  以节省空间;
+>
+>  ```c
+>     * int8  for          dk_size <= 128
+>     * int16 for 256   <= dk_size <= 2**15
+>     * int32 for 2**16 <= dk_size <= 2**31
+>     * int64 for 2**32 <= dk_size
+>  ```
+>
+> 2. `dk_entries`大小由`USABLE_FRACTION(dk_size)`控制(哈希表的稀疏程度);
+> 3. `DK_ENTRIES(dk)`用于获取`dk_entries`的指针;
 
 ```c
 // dict
@@ -264,11 +307,12 @@ typedef struct {
     PyObject **ma_values;
 } PyDictObject;
 
-
+// PyDictKeyEntry 是存放在哈希表中的元素信息 
 typedef struct {
     // me_hash, me_key的哈希值
     Py_hash_t me_hash;
     PyObject *me_key;
+    // 仅对组合表有意义
     PyObject *me_value;
 } PyDictKeyEntry;
 
@@ -279,9 +323,9 @@ struct _dictkeysobject {
     Py_ssize_t dk_size;
     // key查找函数
     dict_lookup_func dk_lookup;
-    // dk_entries 可使用条目数
+    // dk_entries 可使用条目数, 不足需要申请
     Py_ssize_t dk_usable;
-    // dk_entries 使用的条目数
+    // dk_entries 已使用条目数
     Py_ssize_t dk_nentries;
     // 哈希表
     char dk_indices[];
@@ -334,11 +378,142 @@ PyTypeObject PyDict_Type = {
 - `PyDictObject`对象的创建, `PyDict_New()`:
     - 首先尝试获取未释放的对象,  没有, 则新申请`PyDictObject`对象`mp`;
     - 初始化`mp->ma_keys, mp->ma_values`,  `ma_keys`会被初始化为一个`empty_keys_struct`, 增加全局计数;
-- 元素搜索:
+- 元素搜索: `PyDict_GetItem`
+    - 1.计算`key`的hash值; 2.调用`ma_keys->dk_lookup()`
 - 元素插入:
+    - 1.适用`dk_lookup`查找, 2.如果`dk_usable<=0`, 重新申请空间;   
 - `pydict_global_version`: 全局计数;
 
 *******
+
+## 2.程序执行
+
+> python如何运行程序: 
+>
+> 1. 将源码编译成字节码, 编译是一个简单的翻译的不步骤,  字节码可以提高执行速度. 
+> 2. 如果具有写权限, 将把程序的字节码保存为一个以`.pyc`为扩展名的文件. 
+> 3. 如果机器上有字节码, python会直接加载字节码并跳过编译步骤; **如果无写权限, 字节码会丢弃, 所以尽量保证大型程序可以写入**.
+> 4. 字节码发送到Python虚拟机(**PVM**)上执行, **PVM**就是迭代运行字节码指令的大循环.
+
+### 1.一些概念
+
+- `Frame`: 运行时的执行代码的表征, 实现是`PyFrameObject`, 链表结构, 包含字节码对象, 环境信息, 栈信息;
+
+    ```c
+    typedef struct _frame {
+        PyObject_VAR_HEAD
+        struct _frame *f_back;      /* 指向前一个frame, 形成链表结构 */
+        PyCodeObject *f_code;       /* 字节码对象 */
+        PyObject *f_builtins;       /* builtin symbol table (PyDictObject) */
+        PyObject *f_globals;        /* global symbol table (PyDictObject) */
+        PyObject *f_locals;         /* local symbol table (any mapping) */
+        PyObject **f_valuestack;    /* 指向虚拟栈空间 */
+        ...
+    } PyFrameObject;
+    ```
+
+- `Function`: 函数对象, 实现是`PyFunctionObject`, `__code__`属性指向对应的字节码对象;
+
+- `Code Object`: 字节码对象, 实现是`PyCodeObject`, 包含`bytecode `和变量名, 文件名等信息;
+
+- `Bytecode`: 指令和操作码,  PVM对程序的表示, 存放于`PyCodeObject`对象的`.co_code`属性中;
+
+    - PVM根据操作码做出相应操作:`switch(){case...} `
+
+    - ```
+        116	0
+        100	1
+        131	1 
+        1	0
+        100	0
+        83	0
+        ```
+
+### 2.函数调用
+
+```c
+main_loop:
+...
+case TARGET(CALL_FUNCTION): {
+    PREDICTED(CALL_FUNCTION);
+	PyObject **sp, *res;
+	sp = stack_pointer;
+	res = call_function(tstate, &sp, oparg, NULL);
+	stack_pointer = sp;
+	PUSH(res);
+	if (res == NULL) {
+		goto error;
+	}
+	DISPATCH();
+}
+...
+```
+
+
+
+- `PyEval_EvalFrameEx`: 
+- 运行指令过程`_PyEval_EvalFrameDefault()`: 1.进入`main_loop`大循环, 2. 读取`opcode, oparg`, 3. `switch(opcode){case ...}`, 根据操作数, 实施操作;
+- 
+
+### 3.code对象和字节码
+
+> python对程序编译的结果是生成一个`.pyc`文件, 实质是`PyCodeObject`对象, `.pyc`文件只是对象在硬盘上的表现形式;
+>
+> `.co_code`中存放指令操作(指令定义在`opcode.h`中); 
+
+```c
+
+// 在python中, 可以使用 compile 得到 code 对象;
+typedef struct {
+    PyObject_HEAD
+    int co_argcount;            /* 参数数量 */
+    int co_posonlyargcount;     /* #positional only arguments */
+    int co_kwonlyargcount;      /* #keyword only arguments */
+    int co_nlocals;             /* #local variables */
+    int co_stacksize;           /* #entries needed for evaluation stack */
+    int co_flags;               /* CO_..., see below */
+    int co_firstlineno;         /* first source line number */
+    PyObject *co_code;          /* instruction opcodes */
+    PyObject *co_consts;        /* list (constants used) */
+    PyObject *co_names;         /* 所有符号 */
+    PyObject *co_varnames;      /* tuple of strings (local variable names) */
+    PyObject *co_freevars;      /* tuple of strings (free variable names) */
+    PyObject *co_cellvars;      /* tuple of strings (cell variable names) */
+    /* The rest aren't used in either hash or comparisons, except for co_name,
+       used in both. This is done to preserve the name and line number
+       for tracebacks and debuggers; otherwise, constant de-duplication
+       would collapse identical functions/lambdas defined on different lines.
+    */
+    Py_ssize_t *co_cell2arg;    /* Maps cell vars which are arguments. */
+    PyObject *co_filename;      /* unicode (where it was loaded from) */
+    PyObject *co_name;          /* unicode (name, for reference) */
+    PyObject *co_lnotab;        /* string (encoding addr<->lineno mapping) See
+                                   Objects/lnotab_notes.txt for details. */
+    void *co_zombieframe;       /* for optimization only (see frameobject.c) */
+    PyObject *co_weakreflist;   /* to support weakrefs to code objects */
+    /* Scratch space for extra data relating to the code object.
+       Type is a void* to keep the format private in codeobject.c to force
+       people to go through the proper APIs. */
+    void *co_extra;
+
+    /* Per opcodes just-in-time cache
+     *
+     * To reduce cache size, we use indirect mapping from opcode index to
+     * cache object:
+     *   cache = co_opcache[co_opcache_map[next_instr - first_instr] - 1]
+     */
+
+    // co_opcache_map is indexed by (next_instr - first_instr).
+    //  * 0 means there is no cache for this opcode.
+    //  * n > 0 means there is cache in co_opcache[n-1].
+    unsigned char *co_opcache_map;
+    _PyOpcache *co_opcache;
+    int co_opcache_flag;  // used to determine when create a cache.
+    unsigned char co_opcache_size;  // length of co_opcache.
+} PyCodeObject;
+```
+
+- 
 
 ## I.C语言回顾
 
