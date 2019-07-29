@@ -170,7 +170,6 @@
 
   - `*arg, **kwarg`
 
-
 ### 3.作用域
 
 -   `global`和`nonlocal`：
@@ -183,11 +182,11 @@
         ```
 
     -   `nonlocal `：来在函数或其他作用域中使用==外层(非全局)变量==，如闭包中；
--   变量作用域：LEGB，L>E>G>B
+-   变量作用域：LEGB，名称查找顺序: L -> E -> G -> B
     -   L：local，函数内部作用域；
-    -   E：enclosing，函数内部与内嵌函数之间；
+    -   E：enclosing，函数和内部函数之间的作用域(闭包)；
     -   G：global，全局作用域；
-    -   B：`build-in`内置作用域；
+    -   B：builtins , 内置模块的名字空间；
 
 ### 4.闭包
 

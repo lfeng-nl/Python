@@ -12,26 +12,27 @@
 
 ## 1.对象
 
-> 对象的基础是类型`PyObject`, 但是多有对象都不是由其直接实现, 而是由类似`PyVarObject`这样的结构, 但是所有对象都可以强制转换为`PyObject 类型`,  也是一种继承机制;
+> 对象的基础是类型`PyObject`, 但是多有对象都不是由其直接实现,  而是由类似`PyVarObject`这样的结构, 但是所有对象都可以强制转换为`PyObject 类型`,  也是一种继承机制;
 >
 > python所有对象, 都可以转换为`PyObject`进行传递, 调用(多态)
 >
 > ```c
-> /* object.h */
-> typedef struct _object {
->       _PyObject_HEAD_EXTRA
->       // 引用计数
->       Py_ssize_t ob_refcnt;
->       // 类型相关
->       struct _typeobject *ob_type;
-> } PyObject;
-> 
-> /* 可变长对象 */
-> typedef struct {
->       PyObject ob_base;
->       // 对象长度, 例如int类型, 记录需要 digit 个数
->       Py_ssize_t ob_size;
-> } PyVarObject;
+> +------------------------+           +-------------------+
+> |                        |           | PyVarObject       +<-------+
+> |   +------------+       |           +-------------------+        |
+> +-->| PyObject   |       +-----------+ PyObject_HEAD     |        |
+>     +------------+                   |                   |        |
+>     | ob_refcnt  |                   | ob_size           |        |
+>     |            |                   |                   |        |
+>     | ob_type    +-------+           +-------------------+        |
+>     |            |       |                                        |
+>     +------------+       |           +-------------------+        |
+>                          +---------->| PyTypeObject      |        |
+>                                      +-------------------+        |
+>                                      | PyObject_VAR_HEAD +--------+
+>                                      | tp_name           |
+>                                      | ...               |
+>                                      +-------------------+
 > 
 > ```
 
@@ -90,6 +91,7 @@
 - `PyTypeObject`包还含若干函数指针, 最终会指向对象的对应操作的函数或`null`;
 
     - 如数类型的操作加减乘除, 迭代类型的操作, 遍历, 查找, 替换, 取元素等;
+    - 字符串方法: `tp_str`
     
 - `tp_dealloc`和`tp_free`:
 
@@ -148,6 +150,8 @@ PyTypeObject PyLong_Type = {
 
 #### 2.str
 
+> Python3到Python2的升级之一就是使用`Unicode`作为字符串;
+>
 > 
 
 ```c
@@ -384,6 +388,29 @@ PyTypeObject PyDict_Type = {
     - 1.适用`dk_lookup`查找, 2.如果`dk_usable<=0`, 重新申请空间;   
 - `pydict_global_version`: 全局计数;
 
+### 3.函数对象
+
+> ```c
+> typedef struct {
+>     PyObject_HEAD
+>     PyObject *func_code;        /* 字节码对象, __code__ 属性 */
+>     PyObject *func_globals;     /* 字典, 全局变量, __global__ 属性 */
+>     PyObject *func_defaults;    /* NULL or a tuple */
+>     PyObject *func_kwdefaults;  /* NULL or a dict */
+>     PyObject *func_closure;     /* NULL or a tuple of cell objects */
+>     PyObject *func_doc;         /* The __doc__ attribute, can be anything */
+>     PyObject *func_name;        /* The __name__ attribute, a string object */
+>     PyObject *func_dict;        /* The __dict__ attribute, a dict or NULL */
+>     PyObject *func_weakreflist; /* List of weak references */
+>     PyObject *func_module;      /* The __module__ attribute, can be anything */
+>     PyObject *func_annotations; /* Annotations, a dict or NULL */
+>     PyObject *func_qualname;    /* The qualified name */
+>     vectorcallfunc vectorcall;
+> } PyFunctionObject;
+> ```
+>
+> 
+
 *******
 
 ## 2.程序执行
@@ -397,39 +424,91 @@ PyTypeObject PyDict_Type = {
 
 ### 1.一些概念
 
-- `Frame`: 运行时的执行代码的表征, 实现是`PyFrameObject`, 链表结构, 包含字节码对象, 环境信息, 栈信息;
+- `Frame`: 执行环境, 实现是`PyFrameObject`, 链表结构, 包含字节码对象, 环境信息, 栈信息;
 
-    ```c
-    typedef struct _frame {
-        PyObject_VAR_HEAD
-        struct _frame *f_back;      /* 指向前一个frame, 形成链表结构 */
-        PyCodeObject *f_code;       /* 字节码对象 */
-        PyObject *f_builtins;       /* builtin symbol table (PyDictObject) */
-        PyObject *f_globals;        /* global symbol table (PyDictObject) */
-        PyObject *f_locals;         /* local symbol table (any mapping) */
-        PyObject **f_valuestack;    /* 指向虚拟栈空间 */
-        ...
-    } PyFrameObject;
-    ```
 
-- `Function`: 函数对象, 实现是`PyFunctionObject`, `__code__`属性指向对应的字节码对象;
 
-- `Code Object`: 字节码对象, 实现是`PyCodeObject`, 包含`bytecode `和变量名, 文件名等信息;
+### 1.code对象和字节码
 
-- `Bytecode`: 指令和操作码,  PVM对程序的表示, 存放于`PyCodeObject`对象的`.co_code`属性中;
+> python对程序编译的结果是生成一个`.pyc`文件, 实质是`PyCodeObject`对象, `.pyc`文件只是对象在硬盘上的表现形式; 
+>
+> 解释器通过`PyMarshal_WriteObjectToFile`写入pyc文件, 通过`PyMarshal_ReadObjectFromFile`加载pyc文件;
+>
+> ```c
+> // 字节码对象, 包含 字节码, 变量名, 文件名等信息;
+> typedef struct {
+>     PyObject_HEAD
+>     int co_stacksize;           /* #entries needed for evaluation stack */
+>     int co_flags;               /* CO_..., see below */
+>     PyObject *co_code;          /* 指令操作码 */
+>     PyObject *co_names;         /* 所有符号 */
+>     ...
+> } PyCodeObject;
+> ```
 
-    - PVM根据操作码做出相应操作:`switch(){case...} `
 
-    - ```
-        116	0
-        100	1
-        131	1 
-        1	0
-        100	0
-        83	0
+
+- 如何获得`code`对象?
+
+    1. 使用`compile()`编译得到, 例如`compile(source, 'file.py', 'exec')`;
+
+    2. 函数的`__code__`属性;
+
+- 字节码(Bytecode): 包含指令(`LOAD_CONST`)和操作数(0),  指令定义在`opcode.h`中;
+
+    - ```c
+      1   0 LOAD_CONST               0 (<code object foo at 0x7faf650778a0, file "test.py", line 1>)
+              2 LOAD_CONST               1 ('foo')
+              4 MAKE_FUNCTION            0
+              6 STORE_NAME               0 (foo)
+        
+          5   8 LOAD_NAME                0 (foo)
+             10 LOAD_CONST               2 ('hello')
+             12 CALL_FUNCTION            1
+             14 POP_TOP
+             16 LOAD_CONST               3 (None)
+             18 RETURN_VALUE
+      ```
+      
+    - PVM根据指令做出相应操作:`switch(){case...}`
+    
+    - 通过`python3 -m dis file.py`也可以查看相应字节码指令, 或查看`code`对象的`co_code`属性;
+
+### 2.PVM Python虚拟机
+
+> PVM读取每条指令并执行, 并模拟执行环境, 执行环境的实现就是`PyFrameObject`对象; 
+
+#### 1.PyFrameObject
+
+- 实现:
+
+    - ```c
+        typedef struct _frame {
+            PyObject_VAR_HEAD           /* 本身是一个变长对象 */
+            struct _frame *f_back;      /* 执行环境的上一个frame, 形成链表结构 */
+            PyCodeObject *f_code;       /* 字节码对象 */
+            PyObject *f_builtins;       /* builtin symbol table (PyDictObject) */
+            PyObject *f_globals;        /* global symbol table (PyDictObject) */
+            PyObject *f_locals;         /* local symbol table (any mapping) */
+            PyObject **f_valuestack;    /* 运行栈的栈底 */
+            PyObject **f_stacktop;      /* 运行栈的栈顶 */
+            PyObject *f_trace;          /* 异常时调用的句柄 */
+            
+            int f_lasti;                // 上一条字节码指令在f_code中的偏移位置
+            int f_lineno;               // 当前字节码对应的源代码行
+            int f_iblock;               // 当前指令在栈f_blockstack中的索引
+            PyObject *f_localsplus[1];  // locals+stack, 动态大小, 维护(局部变量+运行时栈)所需要的空间 */
+            ...
+        } PyFrameObject;
         ```
 
-### 2.函数调用
+- 由`f_back`形成链表结构;
+
+- 通过`PyFrame_New()`创建一个`frame`
+
+- 可以通过`sys._get_frame()`访问当前的frame;
+
+### 3.函数调用
 
 ```c
 main_loop:
@@ -449,70 +528,8 @@ case TARGET(CALL_FUNCTION): {
 ...
 ```
 
-
-
 - `PyEval_EvalFrameEx`: 
 - 运行指令过程`_PyEval_EvalFrameDefault()`: 1.进入`main_loop`大循环, 2. 读取`opcode, oparg`, 3. `switch(opcode){case ...}`, 根据操作数, 实施操作;
-- 
-
-### 3.code对象和字节码
-
-> python对程序编译的结果是生成一个`.pyc`文件, 实质是`PyCodeObject`对象, `.pyc`文件只是对象在硬盘上的表现形式;
->
-> `.co_code`中存放指令操作(指令定义在`opcode.h`中); 
-
-```c
-
-// 在python中, 可以使用 compile 得到 code 对象;
-typedef struct {
-    PyObject_HEAD
-    int co_argcount;            /* 参数数量 */
-    int co_posonlyargcount;     /* #positional only arguments */
-    int co_kwonlyargcount;      /* #keyword only arguments */
-    int co_nlocals;             /* #local variables */
-    int co_stacksize;           /* #entries needed for evaluation stack */
-    int co_flags;               /* CO_..., see below */
-    int co_firstlineno;         /* first source line number */
-    PyObject *co_code;          /* instruction opcodes */
-    PyObject *co_consts;        /* list (constants used) */
-    PyObject *co_names;         /* 所有符号 */
-    PyObject *co_varnames;      /* tuple of strings (local variable names) */
-    PyObject *co_freevars;      /* tuple of strings (free variable names) */
-    PyObject *co_cellvars;      /* tuple of strings (cell variable names) */
-    /* The rest aren't used in either hash or comparisons, except for co_name,
-       used in both. This is done to preserve the name and line number
-       for tracebacks and debuggers; otherwise, constant de-duplication
-       would collapse identical functions/lambdas defined on different lines.
-    */
-    Py_ssize_t *co_cell2arg;    /* Maps cell vars which are arguments. */
-    PyObject *co_filename;      /* unicode (where it was loaded from) */
-    PyObject *co_name;          /* unicode (name, for reference) */
-    PyObject *co_lnotab;        /* string (encoding addr<->lineno mapping) See
-                                   Objects/lnotab_notes.txt for details. */
-    void *co_zombieframe;       /* for optimization only (see frameobject.c) */
-    PyObject *co_weakreflist;   /* to support weakrefs to code objects */
-    /* Scratch space for extra data relating to the code object.
-       Type is a void* to keep the format private in codeobject.c to force
-       people to go through the proper APIs. */
-    void *co_extra;
-
-    /* Per opcodes just-in-time cache
-     *
-     * To reduce cache size, we use indirect mapping from opcode index to
-     * cache object:
-     *   cache = co_opcache[co_opcache_map[next_instr - first_instr] - 1]
-     */
-
-    // co_opcache_map is indexed by (next_instr - first_instr).
-    //  * 0 means there is no cache for this opcode.
-    //  * n > 0 means there is cache in co_opcache[n-1].
-    unsigned char *co_opcache_map;
-    _PyOpcache *co_opcache;
-    int co_opcache_flag;  // used to determine when create a cache.
-    unsigned char co_opcache_size;  // length of co_opcache.
-} PyCodeObject;
-```
-
 - 
 
 ## I.C语言回顾
