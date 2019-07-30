@@ -16,25 +16,25 @@
 >
 > python所有对象, 都可以转换为`PyObject`进行传递, 调用(多态)
 >
-> ```c
-> +------------------------+           +-------------------+
-> |                        |           | PyVarObject       +<-------+
-> |   +------------+       |           +-------------------+        |
-> +-->| PyObject   |       +-----------+ PyObject_HEAD     |        |
->     +------------+                   |                   |        |
->     | ob_refcnt  |                   | ob_size           |        |
->     |            |                   |                   |        |
->     | ob_type    +-------+           +-------------------+        |
->     |            |       |                                        |
->     +------------+       |           +-------------------+        |
->                          +---------->| PyTypeObject      |        |
->                                      +-------------------+        |
->                                      | PyObject_VAR_HEAD +--------+
->                                      | tp_name           |
->                                      | ...               |
->                                      +-------------------+
-> 
-> ```
+```c
++------------------------+           +-------------------+
+|                        |           | PyVarObject       +<-------+
+|   +------------+       |           +-------------------+        |
++-->| PyObject   |       +-----------+ PyObject_HEAD     |        |
+    +------------+                   |                   |        |
+    | ob_refcnt  |                   | ob_size           |        |
+    |            |                   |                   |        |
+    | ob_type    +-------+           +-------------------+        |
+    |            |       |                                        |
+    +------------+       |           +-------------------+        |
+                         +---------->| PyTypeObject      |        |
+                                     +-------------------+        |
+                                     | PyObject_VAR_HEAD +--------+
+                                     | tp_name           |
+                                     | ...               |
+                                     +-------------------+
+
+```
 
 ### 1.对象基础
 
@@ -480,7 +480,7 @@ PyTypeObject PyDict_Type = {
 
 > PVM读取每条指令并执行, 并模拟执行环境, 执行环境的实现就是`PyFrameObject`对象; 
 
-#### 1.PyFrameObject
+#### 1.栈帧的抽象:PyFrameObject
 
 - 实现:
 
@@ -510,7 +510,7 @@ PyTypeObject PyDict_Type = {
 
 - 可以通过`sys._get_frame()`访问当前的frame;
 
-#### 2.虚拟机运行框架
+#### 2.PVM运行框架
 
 > 首先, 完成运行时的初始化, 然后调用``PyEval_EvalFrameEx` `
 >
@@ -551,6 +551,29 @@ PyTypeObject PyDict_Type = {
 > `PyInterpreterState`是对进程状态的抽象, 通常python只有一个`interpreter`, 其中维护了一个或多个`PyThreadState`对象,  `PyThreadState`是对线程状态的抽象; 线程轮流使用一个字节码执行引擎, 通过GIL实现同步;
 
 - `PyThreadState`
+  
+  - ```c
+      typedef struct _ts PyThreadState;
+      struct _ts {
+          struct _ts *prev;
+          struct _ts *next;            /* 形成双向链表结构 */
+          PyInterpreterState *interp;  /* 指向所属进程 */
+      
+          struct _frame *frame;        /* 线程中的栈帧 */
+          PyObject *curexc_type;       /* 异常类型 */
+          PyObject *curexc_value;      /* 异常值 */
+          PyObject *curexc_traceback;  /* 
+          ... 
+          uint64_t id;                 /* 进程id */
+      
+      };
+      ```
+  
+
+#### 4.PVM异常控制
+
+-   出现异常, 会将异常信息记录在`PyThreadState `的`curexc_*`属性中; 然后`goto error`;
+-   
 
 ### 3.函数调用
 
