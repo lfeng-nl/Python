@@ -260,6 +260,11 @@ PyTypeObject PyList_Type = {
     - `ob_item`指向的空间会按照类似`new_allocated = newsize + (newsize >> 3) + (newsize < 9 ? 3 : 6);`的策略进行预分配;
   - `insert`: 实现是`PyList_Insert()`:
     - 1.按照`ob_size+1`调整大小, 2.插入位置后的元素后移, 3.插入元素;
+  - `remove`: 实现是`list_remove()`:
+    - 1.遍历数组, 跟需要remove的元素比较; 2.如果找到相等的元素, 移除,
+    - **元素比较**: 1. 先比对地址, 如果相同, 直接返回, 2.执行富比较(类型一致, 类型允许富比较(`tp_richcopare != NULL` );
+  - `切片`: 
+    - 1.计算切出的长度, 创建新的列表, 2.遍历, 拷贝数据到新列表;
 - **注意点**:
   - `list`元素个数由`ob_size`存储, 大小由其类型限制, 所以存在容量限制;
 
@@ -422,12 +427,6 @@ PyTypeObject PyDict_Type = {
 > 3. 如果机器上有字节码, python会直接加载字节码并跳过编译步骤; **如果无写权限, 字节码会丢弃, 所以尽量保证大型程序可以写入**.
 > 4. 字节码发送到Python虚拟机(**PVM**)上执行, **PVM**就是迭代运行字节码指令的大循环.
 
-### 1.一些概念
-
-- `Frame`: 执行环境, 实现是`PyFrameObject`, 链表结构, 包含字节码对象, 环境信息, 栈信息;
-
-
-
 ### 1.code对象和字节码
 
 > python对程序编译的结果是生成一个`.pyc`文件, 实质是`PyCodeObject`对象, `.pyc`文件只是对象在硬盘上的表现形式; 
@@ -438,15 +437,18 @@ PyTypeObject PyDict_Type = {
 > // 字节码对象, 包含 字节码, 变量名, 文件名等信息;
 > typedef struct {
 >     PyObject_HEAD
->     int co_stacksize;           /* #entries needed for evaluation stack */
+>     int co_nlocals;             /* 本地变量 */
+>     int co_stacksize;           /* 堆栈需要空间 */
 >     int co_flags;               /* CO_..., see below */
+>     int co_firstlineno;         /* 第一行源码的行号 */
 >     PyObject *co_code;          /* 指令操作码 */
->     PyObject *co_names;         /* 所有符号 */
->     ...
+>     PyObject *co_consts;        /* list, 使用到的常量 */
+>     PyObject *co_varnames;      /* tuple, 局部变量名*/
+>     PyObject *co_freevars;      /* tuple, 自由变量名*/
+>     PyObject *co_cellvars;      /* tuple, 函数和内部函数之间的作用域变量名*/
+>   ...
 > } PyCodeObject;
 > ```
-
-
 
 - 如何获得`code`对象?
 
@@ -507,6 +509,48 @@ PyTypeObject PyDict_Type = {
 - 通过`PyFrame_New()`创建一个`frame`
 
 - 可以通过`sys._get_frame()`访问当前的frame;
+
+#### 2.虚拟机运行框架
+
+> 首先, 完成运行时的初始化, 然后调用``PyEval_EvalFrameEx` `
+>
+> ```c
+> PyObject *
+> PyEval_EvalFrameEx(PyFrameObject *f, int throwflag)
+> {
+>     PyInterpreterState *interp = _PyInterpreterState_GET_UNSAFE();
+>     return interp->eval_frame(f, throwflag);
+> }
+> 
+> // interp->eval_frame = _PyEval_EvalFrameDefault, 调用的是_PyEval_EvalFrameDefault()
+> ```
+>
+> 
+
+- `_PyEval_EvalFrameDefault`
+
+  - ```c
+    PyObject* _Py_HOT_FUNCTION
+    _PyEval_EvalFrameDefault(PyFrameObject *f, int throwflag)
+    {    
+        PyObject **stack_pointer;  /* Next free slot in value stack */
+        int opcode;        /* Current opcode */
+        int oparg;         /* Current opcode argument, if any */
+        PyCodeObject *co;
+    main_loop:
+        for (;;) {
+            // 根据操作码作出相应操作
+            switch (opcode) {
+                    case ...
+        }
+    }
+    ```
+
+#### 3.运行时环境
+
+> `PyInterpreterState`是对进程状态的抽象, 通常python只有一个`interpreter`, 其中维护了一个或多个`PyThreadState`对象,  `PyThreadState`是对线程状态的抽象; 线程轮流使用一个字节码执行引擎, 通过GIL实现同步;
+
+- `PyThreadState`
 
 ### 3.函数调用
 
