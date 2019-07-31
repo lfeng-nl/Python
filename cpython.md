@@ -393,31 +393,6 @@ PyTypeObject PyDict_Type = {
     - 1.适用`dk_lookup`查找, 2.如果`dk_usable<=0`, 重新申请空间;   
 - `pydict_global_version`: 全局计数;
 
-### 3.函数对象
-
-> ```c
-> typedef struct {
->     PyObject_HEAD
->     PyObject *func_code;        /* 字节码对象, __code__ 属性 */
->     PyObject *func_globals;     /* 字典, 全局变量, __global__ 属性 */
->     PyObject *func_defaults;    /* NULL or a tuple */
->     PyObject *func_kwdefaults;  /* NULL or a dict */
->     PyObject *func_closure;     /* NULL or a tuple of cell objects */
->     PyObject *func_doc;         /* The __doc__ attribute, can be anything */
->     PyObject *func_name;        /* The __name__ attribute, a string object */
->     PyObject *func_dict;        /* The __dict__ attribute, a dict or NULL */
->     PyObject *func_weakreflist; /* List of weak references */
->     PyObject *func_module;      /* The __module__ attribute, can be anything */
->     PyObject *func_annotations; /* Annotations, a dict or NULL */
->     PyObject *func_qualname;    /* The qualified name */
->     vectorcallfunc vectorcall;
-> } PyFunctionObject;
-> ```
->
-> 
-
-*******
-
 ## 2.程序执行
 
 > python如何运行程序: 
@@ -443,9 +418,9 @@ PyTypeObject PyDict_Type = {
 >     int co_firstlineno;         /* 第一行源码的行号 */
 >     PyObject *co_code;          /* 指令操作码 */
 >     PyObject *co_consts;        /* list, 使用到的常量 */
->     PyObject *co_varnames;      /* tuple, 局部变量名*/
->     PyObject *co_freevars;      /* tuple, 自由变量名*/
->     PyObject *co_cellvars;      /* tuple, 函数和内部函数之间的作用域变量名*/
+>     PyObject *co_varnames;      /* tuple, 局部变量名 */
+>     PyObject *co_freevars;      /* tuple, 嵌套作用域中变量名集合 内层函数属性*/
+>     PyObject *co_cellvars;      /* tuple, 嵌套作用域中变量名集合 外层函数属性*/
 >   ...
 > } PyCodeObject;
 > ```
@@ -476,6 +451,21 @@ PyTypeObject PyDict_Type = {
     
     - 通过`python3 -m dis file.py`也可以查看相应字节码指令, 或查看`code`对象的`co_code`属性;
 
+- `co_freevars 和 co_cellvars`:
+
+  - `co_freevars `: 在嵌套函数中, 用于**内层函数**保存**外层嵌套**作用域中的变量;
+
+  - `co_cellvars `: 在嵌套函数中, 用于**外层函数**保存**内层嵌套**作用域中的变量;
+
+  - ```python
+    def get_func():
+        x = 1
+        def inner_func():
+            return x
+    get_func.__code__.co_cellvars == ('x',)
+    get_func().__code__.co_freevars == ('x',)
+    ```
+
 ### 2.PVM Python虚拟机
 
 > PVM读取每条指令并执行, 并模拟执行环境, 执行环境的实现就是`PyFrameObject`对象; 
@@ -492,8 +482,8 @@ PyTypeObject PyDict_Type = {
             PyObject *f_builtins;       /* builtin symbol table (PyDictObject) */
             PyObject *f_globals;        /* global symbol table (PyDictObject) */
             PyObject *f_locals;         /* local symbol table (any mapping) */
-            PyObject **f_valuestack;    /* 运行栈的栈底 */
-            PyObject **f_stacktop;      /* 运行栈的栈顶 */
+            PyObject **f_valuestack;    /* 指向最后一个本地变量后, 栈开始处 */
+            PyObject **f_stacktop;      /* 运行栈的栈顶 初始化时 == f_valuestack */
             PyObject *f_trace;          /* 异常时调用的句柄 */
             
             int f_lasti;                // 上一条字节码指令在f_code中的偏移位置
@@ -502,11 +492,23 @@ PyTypeObject PyDict_Type = {
             PyObject *f_localsplus[1];  // locals+stack, 动态大小, 维护(局部变量+运行时栈)所需要的空间 */
             ...
         } PyFrameObject;
+        
+        
+        +-----------+ <---- f_localsplus
+        | locals    |
+        |-----------+ <---- f_valuestack, (初始化f_stacktop)
+        | stack     | 
+        +-----------+ <----- f_stacktop
+        | ...       |
+        +-----------+
         ```
 
 - 由`f_back`形成链表结构;
 
-- 通过`PyFrame_New()`创建一个`frame`
+- `f_localsplus`空间包含 栈和局部变量:
+
+    - `locals`空间大小由`code->co_nlocals + ncells + nfrees`决定;
+    - `f_localsplus`空间 = `locals`空间 + `code->co_stacksize`
 
 - 可以通过`sys._get_frame()`访问当前的frame;
 
@@ -575,7 +577,27 @@ PyTypeObject PyDict_Type = {
 -   出现异常, 会将异常信息记录在`PyThreadState `的`curexc_*`属性中; 然后`goto error`;
 -   
 
-### 3.函数调用
+### 3.函数对象和函数调用
+
+#### 1.函数对象
+
+- ```c
+  typedef struct {
+      PyObject_HEAD               /* 本身也是一个对象 */
+      PyObject *func_code;        /* code对象, __code__ 属性 */
+      PyObject *func_globals;     /* 字典对象, 全局变量 */
+      PyObject *func_defaults;    /* NULL or a tuple */
+      PyObject *func_kwdefaults;  /* NULL or a dict */
+      PyObject *func_closure;     /* NULL or a tuple of cell objects */
+      ...
+      vectorcallfunc vectorcall;
+  ...
+  } PyFunctionObject;
+  ```
+
+- `func_globals`: 对应`__globals__`属性就是**定义**时所在的栈帧(frame)的`f_global`;
+
+#### 2.函数调用
 
 ```c
 main_loop:
@@ -583,7 +605,7 @@ main_loop:
 case TARGET(CALL_FUNCTION): {
     PREDICTED(CALL_FUNCTION);
 	PyObject **sp, *res;
-	sp = stack_pointer;
+	sp = stack_pointer;       /* 获取栈顶地址 */
 	res = call_function(tstate, &sp, oparg, NULL);
 	stack_pointer = sp;
 	PUSH(res);
@@ -595,9 +617,13 @@ case TARGET(CALL_FUNCTION): {
 ...
 ```
 
-- `PyEval_EvalFrameEx`: 
-- 运行指令过程`_PyEval_EvalFrameDefault()`: 1.进入`main_loop`大循环, 2. 读取`opcode, oparg`, 3. `switch(opcode){case ...}`, 根据操作数, 实施操作;
-- 
+- 将函数压栈, 将参数压栈, 通过`CALL_FUNCTION`指令调用函数;
+- `call_function`从栈中获取函数对象(由栈顶地址`sp`和参数个数`oparg`获取)和参数信息, 调用`trace_call_function`, 根据`PyTypeObject`中的`tp_vectorcall_offset`和函数对象, 找到函数对象中的`vectorcall`, 并执行函数;
+- 函数对象类型: `tp_vectorcall_offset = offsetof(PyFunctionObject, vectorcall)`
+
+#### 3.闭包
+
+> 闭包通过函数嵌套完成, 相关属相有`co_freevars,co_cellvars`
 
 ## I.C语言回顾
 
