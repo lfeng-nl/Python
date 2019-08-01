@@ -615,33 +615,43 @@ case TARGET(CALL_FUNCTION): {
 
 ### 4.运行环境
 
+> python入口是`pymain_main()`函数,  通过`pymain_init()`初始化运行环境, 通过`Py_RunMain()`执行python程序;
+>
+> 1.  `pymain_init`: 会初始化`PyPreConfig, PyConfig`
+>
 > `PyInterpreterState`是对进程的抽象, `PyThreadState`是对线程的抽象; 解释器通过进程,线程.栈帧的模拟, 形成完整的运行环境
 
 ```c
-    +---------------------+          +---------------------+
-    | PyInterpreterState  |    +---->+ PyInterpreterState  |
-    +---------------------+    |     +---------------------+
-    | next                +----+     | next                +
-    |  -----------------  |          |  -----------------  |
-    | tstate_head         +          | tstate_head         +
-    |                     |          |                     |
-    +---------------------+          +---------------------+
-
-                            
-        +-----------------+  +---->+-----------------+  +---->+-----------------+
-        | PyThreadState   +<-|---+ | PyThreadState   +<-|---+ | PyThreadState   |
-        +-----------------+  |   | +-----------------+  |   | +-----------------+
-        | prev            |  |   +-+ prev            |  |   +-+ prev            |
-        | next            +--+     | next            +--+     | next            |
-        | interp          |        | interp          |        | interp          |
-        | frame           |        | frame           |        | frame           |
-        |                 |        |                 |        |                 |
-        +-----------------+        +-----------------+        +-----------------+
-
+     +---------------------+          +---------------------+
+     | PyInterpreterState  |    +---->+ PyInterpreterState  |
+     +---------------------+    |     +---------------------+
+     | next                +----+     | next                +
+     |                     |          |                     |
+     | tstate_head         +----+     | tstate_head         +----+
+     |                     |    |     |                     |    |
+     +---------------------+    |     +---------------------+    |
+ +------------------------------+                       +--------+
+ |   +-----------------+    +---->+-----------------+   |    +-----------------+
+ +-->+ PyThreadState   +<---|---+ | PyThreadState   +   +--->+ PyThreadState   |
+     +-----------------+    |   | +-----------------+        +-----------------+
+     | prev            |    |   +-+ prev            |        + prev            |
+     | next            +----+     | next            +        | next            |
+     | interp          |          | interp          |        | interp          |
+     | frame           +----+     | frame           +---+    | frame           |
+     |                 |    |     |                 |   |    |                 |
+     +-----------------+    |     +-----------------+   |    +-----------------+
+ +--------------------------+                           |
+ |   +-----------------+         +-----------------+    |    +-----------------+
+ +-->+ PyFrameObject   |    +--->+ PyFrameObject   |    +--->+ PyFrameObject   |
+     |-----------------|    |    |-----------------|         |-----------------|
+     | f_back          +----+    | f_back          |         | f_back          |
+     | f_code          |         | f_code          |         | f_code          |
+     | f_localsplus    |         | f_localsplus    |         | f_localsplus    |
+     |                 |         |                 |         |                 |
+     | ...             |         | ...             |         | ...             |
+     +-----------------+         +-----------------+         +-----------------+
 
 ```
-
-
 
 #### 1.进程模拟
 
@@ -649,11 +659,12 @@ case TARGET(CALL_FUNCTION): {
 typedef struct _is PyInterpreterState;
 struct _is {
 
-    struct _is *next;               /* 形成联表 */
+    struct _is *next;               /* 形成链表 */
     struct _ts *tstate_head;        /* 指向线程链表 */
 
     int64_t id;						/* 进程号 */
     int64_t id_refcount;
+    _PyFrameEvalFunction eval_frame; 
     int requires_idref;
     PyThread_type_lock id_mutex;
 
@@ -669,6 +680,11 @@ struct _is {
     ...
 };
 ```
+
+-   进程环境初始化:`PyInterpreterState_New`:
+    -   1.申请所需空间; 2.设置`eval_frame`为`_PyEval_EvalFrameDefault`; 3.通过`runtime->interpreters`设置进程id, 并将进程放入链表头; 4.链表头由`interpreters->head`记录;
+    -   python程序运行: `pycore_create_interpreter()中`
+-   
 
 #### 2.线程模拟
 
