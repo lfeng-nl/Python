@@ -548,34 +548,20 @@ PyTypeObject PyDict_Type = {
     }
     ```
 
-#### 3.运行时环境
+#### 3.线程抽象
 
 > `PyInterpreterState`是对进程状态的抽象, 通常python只有一个`interpreter`, 其中维护了一个或多个`PyThreadState`对象,  `PyThreadState`是对线程状态的抽象; 线程轮流使用一个字节码执行引擎, 通过GIL实现同步;
 
 - `PyThreadState`
   
   - ```c
-      typedef struct _ts PyThreadState;
-      struct _ts {
-          struct _ts *prev;
-          struct _ts *next;            /* 形成双向链表结构 */
-          PyInterpreterState *interp;  /* 指向所属进程 */
       
-          struct _frame *frame;        /* 线程中的栈帧 */
-          PyObject *curexc_type;       /* 异常类型 */
-          PyObject *curexc_value;      /* 异常值 */
-          PyObject *curexc_traceback;  /* 
-          ... 
-          uint64_t id;                 /* 进程id */
-      
-      };
       ```
   
 
 #### 4.PVM异常控制
 
 -   出现异常, 会将异常信息记录在`PyThreadState `的`curexc_*`属性中; 然后`goto error`;
--   
 
 ### 3.函数对象和函数调用
 
@@ -624,6 +610,86 @@ case TARGET(CALL_FUNCTION): {
 #### 3.闭包
 
 > 闭包通过函数嵌套完成, 相关属相有`co_freevars,co_cellvars`
+
+- 实现: 在创建内存函数时, 指令为`MAKE_FUNCTION 8`, 通过栈`func ->func_closure = POP();`, 将闭包中的变量信息保存在`func_closure`中;
+
+### 4.运行环境
+
+> `PyInterpreterState`是对进程的抽象, `PyThreadState`是对线程的抽象; 解释器通过进程,线程.栈帧的模拟, 形成完整的运行环境
+
+```c
+    +---------------------+          +---------------------+
+    | PyInterpreterState  |    +---->+ PyInterpreterState  |
+    +---------------------+    |     +---------------------+
+    | next                +----+     | next                +
+    |  -----------------  |          |  -----------------  |
+    | tstate_head         +          | tstate_head         +
+    |                     |          |                     |
+    +---------------------+          +---------------------+
+
+                            
+        +-----------------+  +---->+-----------------+  +---->+-----------------+
+        | PyThreadState   +<-|---+ | PyThreadState   +<-|---+ | PyThreadState   |
+        +-----------------+  |   | +-----------------+  |   | +-----------------+
+        | prev            |  |   +-+ prev            |  |   +-+ prev            |
+        | next            +--+     | next            +--+     | next            |
+        | interp          |        | interp          |        | interp          |
+        | frame           |        | frame           |        | frame           |
+        |                 |        |                 |        |                 |
+        +-----------------+        +-----------------+        +-----------------+
+
+
+```
+
+
+
+#### 1.进程模拟
+
+```c
+typedef struct _is PyInterpreterState;
+struct _is {
+
+    struct _is *next;               /* 形成联表 */
+    struct _ts *tstate_head;        /* 指向线程链表 */
+
+    int64_t id;						/* 进程号 */
+    int64_t id_refcount;
+    int requires_idref;
+    PyThread_type_lock id_mutex;
+
+    int finalizing;
+
+    PyObject *modules;
+    PyObject *modules_by_index;
+    PyObject *sysdict;
+    PyObject *builtins;
+    PyObject *importlib;
+
+    long num_threads;              /* 线程数 */
+    ...
+};
+```
+
+#### 2.线程模拟
+
+```c
+typedef struct _ts PyThreadState;
+struct _ts {
+    struct _ts *prev;
+    struct _ts *next;            /* 形成双向链表结构 */
+    PyInterpreterState *interp;  /* 指向所属进程 */
+
+    struct _frame *frame;        /* 线程中的栈帧 */
+    PyObject *curexc_type;       /* 异常类型 */
+    PyObject *curexc_value;      /* 异常值 */
+    PyObject *curexc_traceback;  /* 
+    ... 
+    uint64_t id;                 /* 进程id */
+
+};
+```
+
+
 
 ## I.C语言回顾
 
