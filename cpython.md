@@ -617,9 +617,9 @@ case TARGET(CALL_FUNCTION): {
 
 > python入口是`pymain_main()`函数,  通过`pymain_init()`初始化运行环境, 通过`Py_RunMain()`执行python程序;
 >
-> 1.  `pymain_init`: 会初始化`PyPreConfig, PyConfig`
+> `PyInterpreterState`是对进程的抽象, `PyThreadState`是对线程的抽象; 解释器通过进程,线程,栈帧的模拟, 形成完整的运行环境. 三者通过指针形成关系.
 >
-> `PyInterpreterState`是对进程的抽象, `PyThreadState`是对线程的抽象; 解释器通过进程,线程.栈帧的模拟, 形成完整的运行环境
+> 可以通用`PyThreadState_GET()` 获取当前活动线程;
 
 ```c
      +---------------------+          +---------------------+
@@ -711,7 +711,8 @@ struct _ts {
     struct _frame *frame;        /* 线程中的栈帧 */
     PyObject *curexc_type;       /* 异常类型 */
     PyObject *curexc_value;      /* 异常值 */
-    PyObject *curexc_traceback;  /* 
+    PyObject *curexc_traceback;  /* */
+    int gilstate_counter;        /* gil */
     ... 
     uint64_t id;                 /* 进程id */
 
@@ -719,7 +720,11 @@ struct _ts {
 ```
 
 - 线程环境创建通过`PyThreadState_New()`:
-  - 
+  - 1.申请空间;
+  - 2.初始化线程数据: `interp`指向进程, 插入已有链表;
+- 可以通过`PyThreadState_GET()`获取当前活动线程, 信息记录在运行时状态中;
+- `PyThreadState_Swap()`: 将线程放入活动运行时活动线程, 返回上一个活动线程;
+- 
 
 ## I.C语言回顾
 
