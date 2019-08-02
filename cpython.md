@@ -664,7 +664,7 @@ struct _is {
 
     int64_t id;						/* 进程号 */
     int64_t id_refcount;
-    _PyFrameEvalFunction eval_frame; 
+    _PyFrameEvalFunction eval_frame;  /* 默认是 _PyEval_EvalFrameDefault, 解释器主程序 */
     int requires_idref;
     PyThread_type_lock id_mutex;
 
@@ -679,11 +679,24 @@ struct _is {
     long num_threads;              /* 线程数 */
     ...
 };
+
+struct pyinterpreters {
+    PyThread_type_lock mutex;
+    PyInterpreterState *head;  /* 记录 PyInterpreterState 链表表头 */
+    PyInterpreterState *main;  /* 记录 main interp */
+    int64_t next_id;           /* 下一个可以分配的id */
+} interpreters;                /* 存放在 interpreters = &runtime->interpreters */
 ```
 
 -   进程环境初始化:`PyInterpreterState_New`:
-    -   1.申请所需空间; 2.设置`eval_frame`为`_PyEval_EvalFrameDefault`; 3.通过`runtime->interpreters`设置进程id, 并将进程放入链表头; 4.链表头由`interpreters->head`记录;
+    
+    1. 申请所需空间; 
+    2. 设置`eval_frame`为`_PyEval_EvalFrameDefault`; 
+    3. 通过`interpreters.next_id`设置进程id, 并将进程放入链表头; 
+    4. 链表头由`interpreters->head`记录;
+    
     -   python程序运行: `pycore_create_interpreter()中`
+    
 -   
 
 #### 2.线程模拟
@@ -705,7 +718,8 @@ struct _ts {
 };
 ```
 
-
+- 线程环境创建通过`PyThreadState_New()`:
+  - 
 
 ## I.C语言回顾
 
