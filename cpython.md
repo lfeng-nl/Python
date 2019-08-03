@@ -1,4 +1,4 @@
-> 主要参考: [栖迟于一丘](https://www.hongweipeng.com/index.php/series.html), [CPython Internals](<https://github.com/rainyear/CPython-Internals-Lecture-Notes>)
+> 主要参考: [栖迟于一丘](https://www.hongweipeng.com/index.php/series.html), [CPython Internals](<https://github.com/rainyear/CPython-Internals-Lecture-Notes>), <<Python源码剖析>>
 >
 > 工具: [visualize](<http://www.pythontutor.com/visualize.html#mode=edit>)
 >
@@ -12,9 +12,9 @@
 
 ## 1.对象
 
-> 对象的基础是类型`PyObject`, 但是多有对象都不是由其直接实现,  而是由类似`PyVarObject`这样的结构, 但是所有对象都可以强制转换为`PyObject 类型`,  也是一种继承机制;
+> 对象的基础是类型`PyObject`, 包含引用计数和类型信息. 除此之外, 还需有空间表示对象的值. 一般对象的实现都是由类似`PyVarObject`这样的结构, 所有对象都可以强制转换为`PyObject`类型,  算是一种继承机制;
 >
-> python所有对象, 都可以转换为`PyObject`进行传递, 调用(多态)
+> 
 >
 ```c
 +------------------------+           +-------------------+
@@ -38,23 +38,32 @@
 
 ### 1.对象基础
 
-#### 1.引用计数
+```c
+typedef struct _object {
+    Py_ssize_t ob_refcnt;			/* 引用计数 */
+    struct _typeobject *ob_type;	/* 类型 */
+} PyObject;
+```
 
-> 通过 `Py_INCREF(op)` 和`Py_DECREF(op)`增加和减少引用计数
+- 引用计数: 
+  - `ob_refcnt`记录了对象的引用计数;
+  - 通过 `Py_INCREF(op)` 和`Py_DECREF(op)`可以增加和减少引用计数;
+  - `Py_DECREF(op)`: 减少引用计数, 当引用计数减少到0时, 调用`op->tp_dealloc`函数, 销毁对象;
+- 定长对象和变长对象:
+  - 定长对象: 不同对象所占空间一致;
+  - 变长对象: 不同对象所占空间不一致; 如`PyVarObject`, 会有记录数据空间大小的元素;
 
-- `Py_DECREF(op)`: 减少引用计数, 当引用计数减少到0时, 调用`op->tp_dealloc`函数, 销毁对象;
+- 多态实现:
+  - 对象的基础是`PyObject,` 所有Python对象, 都可以表示为一个`PyObject`类型, 然后在实际使用中根据 `ob_type`动态判断;
+  - 
 
-#### 2.类型
+#### 1.类型
 
 - ```c
     typedef struct _typeobject {
         PyObject_VAR_HEAD
-        // 类型名
-        const char *tp_name;
-        // 需要初始空间信息, tp_basicsize: 对象需要的基本大小, tp_itemsize: 元素大小
-        Py_ssize_t tp_basicsize, tp_itemsize;
-    
-        /* 实现标准操作的方法 */
+        const char *tp_name;   /* 类型名 */
+        Py_ssize_t tp_basicsize, tp_itemsize; /*  需要初始空间信息, tp_basicsize: 对象需要的基本大小, tp_itemsize: 元素大小 */
     
         // 析构函数
         destructor tp_dealloc;
@@ -67,9 +76,11 @@
         ...
         // 对象销毁函数
         vectorcallfunc tp_vectorcall;
-} PyTypeObject;
+    } PyTypeObject;
     ```
     
+- 类型对象永远不会被析构, **相同类型的对象的类型指向的是同一个类型对象**;
+
 - `PyObject`通过`struct _typeobject *ob_type;`定义对象的类型, 指定类型名称, 基本操作等;
 
 - 地址最前, 保存`PyObject_VAR_HEAD`, 是一个`PyVarObject`结构体, 表示类型也是一个对象;
@@ -97,6 +108,19 @@
 
     - `tp_dealloc`: 析构函数
     - `tp_free`:低层级对象销毁函数, 一般会在`tp_dealloc`中被调用;
+
+#### 2.对象创建
+
+> 一般通过两种途径创建: 1.通过Python C API, 2.通过类型对象`PyInt_Type`;
+>
+> C API分为: 
+>
+> 	1. 泛型API(AOL), 形式为`PyObject_****`, 可以应用在任何Python对象上; 
+>  	2. 与类型相关的API(COL), 通常只能作用在某一种类型上.
+>
+> 对象创建的一般步骤: 
+
+
 
 ### 2.内置类型
 
@@ -397,33 +421,35 @@ PyTypeObject PyDict_Type = {
 
 > python如何运行程序: 
 >
-> 1. 将源码编译成字节码, 编译是一个简单的翻译的不步骤,  字节码可以提高执行速度. 
+> 1. 将源码编译成字节码, 编译是一个简单的翻译的步骤,  字节码可以提高执行速度. 
 > 2. 如果具有写权限, 将把程序的字节码保存为一个以`.pyc`为扩展名的文件. 
 > 3. 如果机器上有字节码, python会直接加载字节码并跳过编译步骤; **如果无写权限, 字节码会丢弃, 所以尽量保证大型程序可以写入**.
-> 4. 字节码发送到Python虚拟机(**PVM**)上执行, **PVM**就是迭代运行字节码指令的大循环.
+> 4. 字节码发送到**Python虚拟机(PVM)**上执行, **PVM**就是迭代运行字节码指令的大循环.
 
-### 1.code对象和字节码
+### 1.pyc文件, code对象和字节码
 
 > python对程序编译的结果是生成一个`.pyc`文件, 实质是`PyCodeObject`对象, `.pyc`文件只是对象在硬盘上的表现形式; 
 >
 > 解释器通过`PyMarshal_WriteObjectToFile`写入pyc文件, 通过`PyMarshal_ReadObjectFromFile`加载pyc文件;
 >
-> ```c
-> // 字节码对象, 包含 字节码, 变量名, 文件名等信息;
-> typedef struct {
->     PyObject_HEAD
->     int co_nlocals;             /* 本地变量 */
->     int co_stacksize;           /* 堆栈需要空间 */
->     int co_flags;               /* CO_..., see below */
->     int co_firstlineno;         /* 第一行源码的行号 */
->     PyObject *co_code;          /* 指令操作码 */
->     PyObject *co_consts;        /* list, 使用到的常量 */
->     PyObject *co_varnames;      /* tuple, 局部变量名 */
->     PyObject *co_freevars;      /* tuple, 嵌套作用域中变量名集合 内层函数属性*/
->     PyObject *co_cellvars;      /* tuple, 嵌套作用域中变量名集合 外层函数属性*/
->   ...
-> } PyCodeObject;
-> ```
+ ```c
+// 字节码对象, 包含 字节码, 变量名, 文件名等信息;
+typedef struct {
+    PyObject_HEAD
+    int co_argcount;            /* 位置参数的个数 */
+    int co_nlocals;             /* 局部变量个数, 包括位置参数 */
+    int co_stacksize;           /* 堆栈需要空间 */
+    int co_flags;               
+    int co_firstlineno;         /* 第一行源码的行号 */
+    PyObject *co_code;          /* 字节码指令序列 */
+    PyObject *co_names;            /* 所有的符号 */
+    PyObject *co_consts;        /* list, 使用到的常量 */
+    PyObject *co_varnames;      /* tuple, 局部变量名 */
+    PyObject *co_freevars;      /* tuple, 嵌套作用域中变量名集合 内层函数属性*/
+    PyObject *co_cellvars;      /* tuple, 嵌套作用域中变量名集合 外层函数属性*/
+    ...
+} PyCodeObject;
+ ```
 
 - 如何获得`code`对象?
 
@@ -431,24 +457,24 @@ PyTypeObject PyDict_Type = {
 
     2. 函数的`__code__`属性;
 
-- 字节码(Bytecode): 包含指令(`LOAD_CONST`)和操作数(0),  指令定义在`opcode.h`中;
+- 字节码(Bytecode): 包含指令(如`LOAD_CONST`)和操作数(0),  指令定义在`opcode.h`中;
 
     - ```c
-      1   0 LOAD_CONST               0 (<code object foo at 0x7faf650778a0, file "test.py", line 1>)
-              2 LOAD_CONST               1 ('foo')
-              4 MAKE_FUNCTION            0
-              6 STORE_NAME               0 (foo)
+          1   0 LOAD_CONST           0 (<code object foo at 0x7faf650778a0, file "test.py", line 1>)
+              2 LOAD_CONST           1 ('foo')
+              4 MAKE_FUNCTION        0
+              6 STORE_NAME           0 (foo)
         
-          5   8 LOAD_NAME                0 (foo)
-             10 LOAD_CONST               2 ('hello')
-             12 CALL_FUNCTION            1
+          5   8 LOAD_NAME            0 (foo)
+             10 LOAD_CONST           2 ('hello')
+             12 CALL_FUNCTION        1
              14 POP_TOP
-             16 LOAD_CONST               3 (None)
+             16 LOAD_CONST           3 (None)
              18 RETURN_VALUE
       ```
       
     - PVM根据指令做出相应操作:`switch(){case...}`
-    
+
     - 通过`python3 -m dis file.py`也可以查看相应字节码指令, 或查看`code`对象的`co_code`属性;
 
 - `co_freevars 和 co_cellvars`:
@@ -493,14 +519,18 @@ PyTypeObject PyDict_Type = {
             ...
         } PyFrameObject;
         
-        
-        +-----------+ <---- f_localsplus
-        | locals    |
-        |-----------+ <---- f_valuestack, (初始化f_stacktop)
-        | stack     | 
-        +-----------+ <----- f_stacktop
-        | ...       |
-        +-----------+
+        /* 模拟栈结构 */
+         +===============+
+         | PyFrameObject |
+         +===============+
+         | 其他属性       |
+         +---------------+ <---- f_localsplus
+         | locals        |   <-- 局部变量, 嵌套作用域中的变量 信息
+         |---------------+ <---- f_valuestack 栈底
+         | stack         |   <-- 栈信息
+         +---------------+ <---- f_stacktop 栈顶
+         | ...           |
+         +---------------+
         ```
 
 - 由`f_back`形成链表结构;
@@ -510,54 +540,60 @@ PyTypeObject PyDict_Type = {
     - `locals`空间大小由`code->co_nlocals + ncells + nfrees`决定;
     - `f_localsplus`空间 = `locals`空间 + `code->co_stacksize`
 
-- 可以通过`sys._get_frame()`访问当前的frame;
+- 栈帧的创建: `_PyFrame_New_NoTrack(tstate, code, globals, locals)`
+
+    1. 申请空间或从`free_list`中取出闲置frame, 申请空间时需要额外空间`extras = code->co_stacksize + code->co_nlocals + ncells + nfrees`;
+    2. 初始化`f_code, f_globals, f_locals, f_builtins`;
+    3. 将frame插入链表;
+
+- 可以通过`sys._getframe()`访问当前的frame;
 
 #### 2.PVM运行框架
 
-> 首先, 完成运行时的初始化, 然后调用``PyEval_EvalFrameEx` `
->
-> ```c
-> PyObject *
-> PyEval_EvalFrameEx(PyFrameObject *f, int throwflag)
-> {
->     PyInterpreterState *interp = _PyInterpreterState_GET_UNSAFE();
->     return interp->eval_frame(f, throwflag);
-> }
-> 
-> // interp->eval_frame = _PyEval_EvalFrameDefault, 调用的是_PyEval_EvalFrameDefault()
-> ```
->
-> 
+> PVM的具体实现就是 `PyEval_EvalFrameEx `函数
 
-- `_PyEval_EvalFrameDefault`
+```c
+PyObject *
+PyEval_EvalFrameEx(PyFrameObject *f, int throwflag)
+{
+ PyInterpreterState *interp = _PyInterpreterState_GET_UNSAFE(); /* 找到进程对象 */
+ return interp->eval_frame(f, throwflag);                       /* 执行进程对象的 eval_frame */
+}
 
-  - ```c
-    PyObject* _Py_HOT_FUNCTION
-    _PyEval_EvalFrameDefault(PyFrameObject *f, int throwflag)
-    {    
-        PyObject **stack_pointer;  /* Next free slot in value stack */
-        int opcode;        /* Current opcode */
-        int oparg;         /* Current opcode argument, if any */
-        PyCodeObject *co;
-    main_loop:
-        for (;;) {
-            // 根据操作码作出相应操作
-            switch (opcode) {
-                    case ...
-        }
+/* eval_frame 一般会被初始化为 _PyEval_EvalFrameDefault */
+/* interp->eval_frame = _PyEval_EvalFrameDefault, 调用的是_PyEval_EvalFrameDefault() */
+
+/* _PyEval_EvalFrameDefault 就是一个遍历字节码并执行的过程 */
+PyObject* _Py_HOT_FUNCTION
+_PyEval_EvalFrameDefault(PyFrameObject *f, int throwflag)
+{    
+    PyObject **stack_pointer;  /* Next free slot in value stack */
+    const _Py_CODEUNIT *next_instr;  /* 指向下一条待执行字节码指令位置, 类似PC指针 */
+    int opcode;        /* Current opcode */
+    int oparg;         /* Current opcode argument, if any */
+    PyCodeObject *co;
+main_loop:
+    for (;;) {
+        // 根据操作码作出相应操作
+        switch (opcode) {
+                case ...
     }
-    ```
+}
+```
 
-#### 3.线程抽象
+#### 3.作用域和名字空间
+
+> LEGB: 本地作用域 -> 外围作用域 -> 全局作用域 -> 内建
+>
+> 属性: 本质也是名称查找, 只是不使用LEGB, 而是在对象的名字空间查找;
+
+- 名称查找会在当前所在`frame`, 按照`frame->f_locals,frame->f_globals,frame->f_globals, frame->f_builtin`的顺序查找;
+- `frame->f_locals`包含: `co_varnames, co_freevars, co_cellvars`中的变量;
+- 
+
+
 
 > `PyInterpreterState`是对进程状态的抽象, 通常python只有一个`interpreter`, 其中维护了一个或多个`PyThreadState`对象,  `PyThreadState`是对线程状态的抽象; 线程轮流使用一个字节码执行引擎, 通过GIL实现同步;
-
-- `PyThreadState`
-  
-  - ```c
-      
-      ```
-  
 
 #### 4.PVM异常控制
 
@@ -689,7 +725,7 @@ struct pyinterpreters {
 ```
 
 -   进程环境初始化:`PyInterpreterState_New`:
-    
+  
     1. 申请所需空间; 
     2. 设置`eval_frame`为`_PyEval_EvalFrameDefault`; 
     3. 通过`interpreters.next_id`设置进程id, 并将进程放入链表头; 
