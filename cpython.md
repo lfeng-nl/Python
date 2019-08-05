@@ -457,7 +457,11 @@ typedef struct {
 
     2. 函数的`__code__`属性;
 
-- 字节码(Bytecode): 包含指令(如`LOAD_CONST`)和操作数(0),  指令定义在`opcode.h`中;
+- 字节码(Bytecode): 包含指令(如`LOAD_CONST`)和操作数,  指令定义在`opcode.h`中;
+
+    - 通过` opcode = _Py_OPCODE(word)`取出指令;
+
+    - 通过`oparg = _Py_OPARG(word);`取出操作数;
 
     - ```c
           1   0 LOAD_CONST           0 (<code object foo at 0x7faf650778a0, file "test.py", line 1>)
@@ -472,7 +476,7 @@ typedef struct {
              16 LOAD_CONST           3 (None)
              18 RETURN_VALUE
       ```
-      
+
     - PVM根据指令做出相应操作:`switch(){case...}`
 
     - 通过`python3 -m dis file.py`也可以查看相应字节码指令, 或查看`code`对象的`co_code`属性;
@@ -496,7 +500,7 @@ typedef struct {
 
 > PVM读取每条指令并执行, 并模拟执行环境, 执行环境的实现就是`PyFrameObject`对象; 
 
-#### 1.栈帧的抽象:PyFrameObject
+#### 1.栈帧的抽象:`PyFrameObject`
 
 - 实现:
 
@@ -504,7 +508,7 @@ typedef struct {
         typedef struct _frame {
             PyObject_VAR_HEAD           /* 本身是一个变长对象 */
             struct _frame *f_back;      /* 执行环境的上一个frame, 形成链表结构 */
-            PyCodeObject *f_code;       /* 字节码对象 */
+            PyCodeObject *f_code;       /* 指向对应的字节码对象 */
             PyObject *f_builtins;       /* builtin symbol table (PyDictObject) */
             PyObject *f_globals;        /* global symbol table (PyDictObject) */
             PyObject *f_locals;         /* local symbol table (any mapping) */
@@ -546,11 +550,15 @@ typedef struct {
     2. 初始化`f_code, f_globals, f_locals, f_builtins`;
     3. 将frame插入链表;
 
+- 随着程序的执行, `f_global, f_builtins`可能会增加;
+
 - 可以通过`sys._getframe()`访问当前的frame;
 
 #### 2.PVM运行框架
 
-> PVM的具体实现就是 `PyEval_EvalFrameEx `函数
+> PVM的具体实现就是 `PyEval_EvalFrameEx `函数;
+>
+> 虚拟机是对CPU的抽象, 运行过程就是遍历`PyCodeObject`对象的`co_code`字节码, 并执行指令的过程;
 
 ```c
 PyObject *
@@ -567,16 +575,24 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throwflag)
 PyObject* _Py_HOT_FUNCTION
 _PyEval_EvalFrameDefault(PyFrameObject *f, int throwflag)
 {    
-    PyObject **stack_pointer;  /* Next free slot in value stack */
+    PyObject **stack_pointer;        /* Next free slot in value stack */
     const _Py_CODEUNIT *next_instr;  /* 指向下一条待执行字节码指令位置, 类似PC指针 */
-    int opcode;        /* Current opcode */
-    int oparg;         /* Current opcode argument, if any */
+    int opcode;                      /* 指令 */
+    int oparg;                       /* 操作码 */
     PyCodeObject *co;
+    PyThreadState * const tstate = _PyRuntimeState_GetThreadState(runtime); /* 获取当前活动线程 */
+    ...
+    tstate->frame = f;              /* 将 frame 赋予 当前活动线程;
 main_loop:
     for (;;) {
-        // 根据操作码作出相应操作
-        switch (opcode) {
-                case ...
+fast_next_opcode:                    /* 每条指令执行成功, 跳到此处 */
+        ...
+        switch (opcode) {            /* 根据操作码作出相应操作 */
+                case xxx {
+                    ...;
+                    goto fast_next_opcode
+                }
+                ...
     }
 }
 ```
@@ -601,6 +617,10 @@ main_loop:
 
 ### 3.函数对象和函数调用
 
+> `PyFunctionObject`是对python代码在运行时动态产生的,  在执行`def`语句是创建; 包含函数的代码信息`func_code`, 上下文信息`f_globals`
+>
+> 
+
 #### 1.函数对象
 
 - ```c
@@ -617,7 +637,12 @@ main_loop:
   } PyFunctionObject;
   ```
 
-- `func_globals`: 对应`__globals__`属性就是**定义**时所在的栈帧(frame)的`f_global`;
+- `func_globals`: 对应`__globals__`属性, 指向所在`frame`的`f_global`, 当`f_global`发生变化, `__global__`也可以感知到;
+
+- python在执行`def`语句时, 会在`MAKE_FUNCTION`指令过程中调用`PyFunction_NewWithQualName`创建一个函数对象, :
+
+  1. 申请空间;
+  2. 初始化: `op->func_code = code; op->func_globals = globals; op->func_name = ((PyCodeObject *)code)->co_name; op->vectorcall = _PyFunction_Vectorcall;`
 
 #### 2.函数调用
 
@@ -627,20 +652,19 @@ main_loop:
 case TARGET(CALL_FUNCTION): {
     PREDICTED(CALL_FUNCTION);
 	PyObject **sp, *res;
-	sp = stack_pointer;       /* 获取栈顶地址 */
-	res = call_function(tstate, &sp, oparg, NULL);
-	stack_pointer = sp;
-	PUSH(res);
-	if (res == NULL) {
-		goto error;
-	}
-	DISPATCH();
+	sp = stack_pointer;       						/* 获取栈顶地址 */
+	res = call_function(tstate, &sp, oparg, NULL);	/* 执行调用 */
+	...
 }
 ...
 ```
 
-- 将函数压栈, 将参数压栈, 通过`CALL_FUNCTION`指令调用函数;
-- `call_function`从栈中获取函数对象(由栈顶地址`sp`和参数个数`oparg`获取)和参数信息, 调用`trace_call_function`, 根据`PyTypeObject`中的`tp_vectorcall_offset`和函数对象, 找到函数对象中的`vectorcall`, 并执行函数;
+- 将函数压栈, 将参数压栈, 通过`CALL_FUNCTION`指令调用函数`call_function`;
+- `call_function`:
+  - 内联函数, 减少 堆栈使用;
+  - 从栈中获取函数对象(由栈顶地址`sp`和参数个数`oparg`获取)和参数信息, 调用`PyFunctionObject->vectorcall`;
+  - `vectorcall`在函数创建是被初始化为`_PyFunction_Vectorcall`
+  - `_PyFunction_Vectorcall()`最终调用`PyEval_EvalFrameEx()`
 - 函数对象类型: `tp_vectorcall_offset = offsetof(PyFunctionObject, vectorcall)`
 
 #### 3.闭包
@@ -651,9 +675,9 @@ case TARGET(CALL_FUNCTION): {
 
 ### 4.运行环境
 
-> python入口是`pymain_main()`函数,  通过`pymain_init()`初始化运行环境, 通过`Py_RunMain()`执行python程序;
+> `PyInterpreterState`是对进程的抽象, `PyThreadState`是对线程的抽象;  解释器通过进程,线程,栈帧的模拟, 形成完整的运行环境. 三者通过指针形成关系.
 >
-> `PyInterpreterState`是对进程的抽象, `PyThreadState`是对线程的抽象; 解释器通过进程,线程,栈帧的模拟, 形成完整的运行环境. 三者通过指针形成关系.
+> 通常, python仅有一个进程, 该进程中维护了一个或多个`PyThreadState`对象, 线程轮流使用一个`PVM`, 通过`PyThreadState_Swap`进行线程切换;
 >
 > 可以通用`PyThreadState_GET()` 获取当前活动线程;
 
@@ -689,7 +713,54 @@ case TARGET(CALL_FUNCTION): {
 
 ```
 
-#### 1.进程模拟
+#### 1.runtime
+
+```c
+typedef struct pyruntimestate {
+    /* 是否进行预初始化? 通过 Py_PreInitialize()  */
+    int pre_initialized;
+    /* 是否进行 Python core 初始化? 通过  _Py_InitializeCore()置1 */
+    int core_initialized;
+    /* 是否完成初始化, Set to 1 by Py_Initialize() */
+    int initialized;
+
+    PyThreadState *finalizing;
+
+    struct pyinterpreters {
+        PyThread_type_lock mutex;
+        PyInterpreterState *head;  /* 记录进程表头 */
+        PyInterpreterState *main;  /* 记录主进程 */
+        int64_t next_id;           /* 下一个进程id, main进程id=0 */
+    } interpreters;
+    // XXX Remove this field once we have a tp_* slot.
+    struct _xidregistry {
+        PyThread_type_lock mutex;
+        struct _xidregitem *head;
+    } xidregistry;
+
+    unsigned long main_thread;
+
+#define NEXITFUNCS 32
+    void (*exitfuncs[NEXITFUNCS])(void);
+    int nexitfuncs;
+
+    struct _gc_runtime_state gc;
+    struct _ceval_runtime_state ceval;
+    struct _gilstate_runtime_state gilstate;
+
+    PyPreConfig preconfig;
+
+    Py_OpenCodeHookFunction open_code_hook;
+    void *open_code_userdata;
+    _Py_AuditHookEntry *audit_hook_head;
+
+    // XXX Consolidate globals found via the check-c-globals script.
+} _PyRuntimeState;
+```
+
+#### 2.进程模拟
+
+> 通常情况, python仅有一个进程
 
 ```c
 typedef struct _is PyInterpreterState;
@@ -724,18 +795,19 @@ struct pyinterpreters {
 } interpreters;                /* 存放在 interpreters = &runtime->interpreters */
 ```
 
--   进程环境初始化:`PyInterpreterState_New`:
+-   进程环境初始化:`PyInterpreterState_New()`:
   
     1. 申请所需空间; 
     2. 设置`eval_frame`为`_PyEval_EvalFrameDefault`; 
     3. 通过`interpreters.next_id`设置进程id, 并将进程放入链表头; 
     4. 链表头由`interpreters->head`记录;
+    5. 如果`interpreters->main`为空, 这记录当前进程为主进程;
     
     -   python程序运行: `pycore_create_interpreter()中`
     
 -   
 
-#### 2.线程模拟
+#### 3.线程模拟
 
 ```c
 typedef struct _ts PyThreadState;
