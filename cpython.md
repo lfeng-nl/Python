@@ -603,13 +603,11 @@ fast_next_opcode:                    /* 每条指令执行成功, 跳到此处 *
 >
 > 属性: 本质也是名称查找, 只是不使用LEGB, 而是在对象的名字空间查找;
 
-- 名称查找会在当前所在`frame`, 按照`frame->f_locals,frame->f_globals,frame->f_globals, frame->f_builtin`的顺序查找;
+- 名称查找: **在当前所在`frame`**, 按照以下顺序查找:
+    1.  `frame->f_locals`(包含局部变量和嵌套函数间的变量)
+    2.  `frame->f_globals`
+    3.  `frame->f_builtin`
 - `frame->f_locals`包含: `co_varnames, co_freevars, co_cellvars`中的变量;
-- 
-
-
-
-> `PyInterpreterState`是对进程状态的抽象, 通常python只有一个`interpreter`, 其中维护了一个或多个`PyThreadState`对象,  `PyThreadState`是对线程状态的抽象; 线程轮流使用一个字节码执行引擎, 通过GIL实现同步;
 
 #### 4.PVM异常控制
 
@@ -630,7 +628,7 @@ fast_next_opcode:                    /* 每条指令执行成功, 跳到此处 *
       PyObject *func_globals;     /* 字典对象, 全局变量 */
       PyObject *func_defaults;    /* NULL or a tuple */
       PyObject *func_kwdefaults;  /* NULL or a dict */
-      PyObject *func_closure;     /* NULL or a tuple of cell objects */
+      PyObject *func_closure;     /* 嵌套作用域中的信息 */
       ...
       vectorcallfunc vectorcall;
   ...
@@ -642,7 +640,16 @@ fast_next_opcode:                    /* 每条指令执行成功, 跳到此处 *
 - python在执行`def`语句时, 会在`MAKE_FUNCTION`指令过程中调用`PyFunction_NewWithQualName`创建一个函数对象, :
 
   1. 申请空间;
-  2. 初始化: `op->func_code = code; op->func_globals = globals; op->func_name = ((PyCodeObject *)code)->co_name; op->vectorcall = _PyFunction_Vectorcall;`
+  2. 初始化: 
+      1. `op->func_code = code;`
+      2. ` op->func_globals = globals;`
+      3. ` op->func_name = ((PyCodeObject *)code)->co_name;`
+      4. ` op->vectorcall = _PyFunction_Vectorcall;`
+  
+-  函数的名字空间:
+
+    - 函数定义时记录当前`PyFrameObject`的`f_globals`信息,;
+    - 函数被调用时, 调用过程中创建的`PyFrameObject`会获得函数对象中记录的`func_globals`;
 
 #### 2.函数调用
 
@@ -664,20 +671,61 @@ case TARGET(CALL_FUNCTION): {
   - 内联函数, 减少 堆栈使用;
   - 从栈中获取函数对象(由栈顶地址`sp`和参数个数`oparg`获取)和参数信息, 调用`PyFunctionObject->vectorcall`;
   - `vectorcall`在函数创建是被初始化为`_PyFunction_Vectorcall`
-  - `_PyFunction_Vectorcall()`最终调用`PyEval_EvalFrameEx()`
+  - `_PyFunction_Vectorcall()`: 先创建`frame`信息, 最终调用`PyEval_EvalFrameEx()`
 - 函数对象类型: `tp_vectorcall_offset = offsetof(PyFunctionObject, vectorcall)`
 
 #### 3.闭包
 
 > 闭包通过函数嵌套完成, 相关属相有`co_freevars,co_cellvars`
 
-- 实现: 在创建内存函数时, 指令为`MAKE_FUNCTION 8`, 通过栈`func ->func_closure = POP();`, 将闭包中的变量信息保存在`func_closure`中;
+```c
+// 内存函数的创建
+case TARGET(MAKE_FUNCTION): {
+    // 创建 PyFunctionObject 
+    PyFunctionObject *func = (PyFunctionObject *)
+        PyFunction_NewWithQualName(codeobj, f->f_globals, qualname);
+    // 如果是创建内层函数, 取出 嵌套区域名称空间 赋值给func_closure
+    if (oparg & 0x08) {
+        assert(PyTuple_CheckExact(TOP()));
+        func ->func_closure = POP();
+    }
+}
+```
+
+-   内存函数创建时, 嵌套作用域中的名字信息存放在`func_glosure`中;
+
+-   在函数调用时: 通过`closure = PyFunction_GET_CLOSURE(func)`, 取出函数对象中的嵌套作用域信息;
+
+-   嵌套作用域中的信息在`_PyEval_EvalCodeWithName()`中, 被拷贝到栈中:
+
+    -   ```c
+         +---------------+ <---- f_localsplus
+         | locals        |   
+         |   - - - - -   +  <--- freevars(中间过程)
+         | ..closure     |
+         |               |
+         |---------------+ <---- f_valuestack 栈底
+         | stack         |   <-- 栈信息
+         +---------------+ <---- f_stacktop 栈顶
+         | ...           |
+         +---------------+
+        
+        freevars = f->f_localsplus + co->co_nlocals;
+        /* closure = PyFunction_GET_CLOSURE(func) */
+        for (i = 0; i < PyTuple_GET_SIZE(co->co_freevars); ++i) {
+            PyObject *o = PyTuple_GET_ITEM(closure, i);
+            Py_INCREF(o);
+            freevars[PyTuple_GET_SIZE(co->co_cellvars) + i] = o;
+        }
+        ```
+
+    -   
 
 ### 4.运行环境
 
 > `PyInterpreterState`是对进程的抽象, `PyThreadState`是对线程的抽象;  解释器通过进程,线程,栈帧的模拟, 形成完整的运行环境. 三者通过指针形成关系.
 >
-> 通常, python仅有一个进程, 该进程中维护了一个或多个`PyThreadState`对象, 线程轮流使用一个`PVM`, 通过`PyThreadState_Swap`进行线程切换;
+> 通常, python仅有一个进程, 该进程中维护了一个或多个`PyThreadState`对象, 线程轮流使用一个`PVM`, 通过`PyThreadState_Swap`进行线程切换, 通过GIL实现同步;
 >
 > 可以通用`PyThreadState_GET()` 获取当前活动线程;
 
