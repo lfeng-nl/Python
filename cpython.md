@@ -424,11 +424,15 @@ PyTypeObject PyDict_Type = {
 > 1. 将源码编译成字节码, 编译是一个简单的翻译的步骤,  字节码可以提高执行速度. 
 > 2. 如果具有写权限, 将把程序的字节码保存为一个以`.pyc`为扩展名的文件. 
 > 3. 如果机器上有字节码, python会直接加载字节码并跳过编译步骤; **如果无写权限, 字节码会丢弃, 所以尽量保证大型程序可以写入**.
-> 4. 字节码发送到**Python虚拟机(PVM)**上执行, **PVM**就是迭代运行字节码指令的大循环.
+> 4. 字节码发送到**Python虚拟机(PVM)**上执行, 由虚拟机一条一条地执行字节码, **PVM**就是迭代运行字节码指令的大循环.
 
-### 1.pyc文件, code对象和字节码
+### 1.pyc文件, PyCodeObject对象和字节码
 
-> python对程序编译的结果是生成一个`.pyc`文件, 实质是`PyCodeObject`对象, `.pyc`文件只是对象在硬盘上的表现形式; 
+> **pyc文件** : python对程序编译的结果是生成一个`.pyc`文件, 实质是`PyCodeObject`对象, `pyc`文件只是`PyCodeObject`对象在硬盘上的表现形式; 
+>
+> **PyCodeObject对象**: 
+>
+> **PyCodeObject对象**范围
 >
 > 解释器通过`PyMarshal_WriteObjectToFile`写入pyc文件, 通过`PyMarshal_ReadObjectFromFile`加载pyc文件;
 >
@@ -442,7 +446,7 @@ typedef struct {
     int co_flags;               
     int co_firstlineno;         /* 第一行源码的行号 */
     PyObject *co_code;          /* 字节码指令序列 */
-    PyObject *co_names;            /* 所有的符号 */
+    PyObject *co_names;         /* 所有的符号 */
     PyObject *co_consts;        /* list, 使用到的常量 */
     PyObject *co_varnames;      /* tuple, 局部变量名 */
     PyObject *co_freevars;      /* tuple, 嵌套作用域中变量名集合 内层函数属性*/
@@ -479,7 +483,10 @@ typedef struct {
 
     - PVM根据指令做出相应操作:`switch(){case...}`
 
-    - 通过`python3 -m dis file.py`也可以查看相应字节码指令, 或查看`code`对象的`co_code`属性;
+- 字节码的查看:
+
+    - 通过`python3 -m dis file.py`也可以查看相应字节码指令;
+    - `dis.dis(co)`, 查看`PyCodeObject`对象的字节码信息;
 
 - `co_freevars 和 co_cellvars`:
 
@@ -498,7 +505,7 @@ typedef struct {
 
 ### 2.PVM Python虚拟机
 
-> PVM读取每条指令并执行, 并模拟执行环境, 执行环境的实现就是`PyFrameObject`对象; 
+> PVM从PyCodeObject对象中依次读入每一条字节码, 并在当前上下文环境中执行, `PyFrameObject`对象;就是PVM对执行环境的抽象;
 
 #### 1.栈帧的抽象:`PyFrameObject`
 
@@ -523,38 +530,53 @@ typedef struct {
             ...
         } PyFrameObject;
         
-        /* 模拟栈结构 */
+        /* PyFrameObject 的模拟栈结构 */
          +===============+
          | PyFrameObject |
          +===============+
          | 其他属性       |
          +---------------+ <---- f_localsplus
-         | locals        |   <-- 局部变量, 嵌套作用域中的变量 信息
+         | locals        |  =--> 局部变量, 嵌套作用域中的变量 信息
          |---------------+ <---- f_valuestack 栈底
-         | stack         |   <-- 栈信息
+         | stack         |  =--> 栈信息
          +---------------+ <---- f_stacktop 栈顶
          | ...           |
          +---------------+
         ```
 
-- 由`f_back`形成链表结构;
+- 关联的栈帧由`f_back`形成链表结构;
 
-- `f_localsplus`空间包含 栈和局部变量:
+- `f_localsplus`空间包含**栈空间** 和 **局部变量空间(局部变量+闭包内变量)**:
 
-    - `locals`空间大小由`code->co_nlocals + ncells + nfrees`决定;
-    - `f_localsplus`空间 = `locals`空间 + `code->co_stacksize`
+    - `locals`部分的空间大小由`code->co_nlocals + ncells + nfrees`决定;
+    - `f_localsplus`空间 = `locals`空间 + `code->co_stacksize(栈空间大小)`
 
 - 栈帧的创建: `_PyFrame_New_NoTrack(tstate, code, globals, locals)`
 
-    1. 申请空间或从`free_list`中取出闲置frame, 申请空间时需要额外空间`extras = code->co_stacksize + code->co_nlocals + ncells + nfrees`;
+    1. 申请空间或从`free_list`中取出闲置frame; 申请空间大小需附加额外空间`extras = code->co_stacksize + code->co_nlocals + ncells + nfrees`;
     2. 初始化`f_code, f_globals, f_locals, f_builtins`;
     3. 将frame插入链表;
 
-- 随着程序的执行, `f_global, f_builtins`可能会增加;
-
 - 可以通过`sys._getframe()`访问当前的frame;
 
-#### 2.PVM运行框架
+#### 2.作用域和名字空间
+
+> python名字查找顺序 LEGB: 本地作用域 -> 闭包作用域 -> 全局作用域 -> 内建
+>
+> 属性: 本质也是名称查找, 只是不使用LEGB, 而是在对象的名字空间查找;
+
+- 名称查找: **在当前所在frame**, 按照以下顺序查找:
+    1.  `frame->f_locals`(包含局部变量和嵌套函数间的变量)
+    2.  `frame->f_globals`
+    3.  `frame->f_builtin`
+- `frame->f_locals`包含: `co_varnames, co_freevars, co_cellvars`中的变量;
+- 全局变量的传递:
+    - `(创建时的frame)f->f_globals` ---函数定义--> `(函数对象)op->func_globals ` ---函数调用-->  `(函数调用的frame)f->f_globals` ;
+- 闭包变量的传递:
+    - `(创建时的frame)f->f_locals` ---放入栈中--> `(函数对象)op->func_closure` --函数调用--> 
+
+
+#### 3.PVM运行框架
 
 > PVM的具体实现就是 `PyEval_EvalFrameEx `函数;
 >
@@ -597,17 +619,6 @@ fast_next_opcode:                    /* 每条指令执行成功, 跳到此处 *
 }
 ```
 
-#### 3.作用域和名字空间
-
-> LEGB: 本地作用域 -> 外围作用域 -> 全局作用域 -> 内建
->
-> 属性: 本质也是名称查找, 只是不使用LEGB, 而是在对象的名字空间查找;
-
-- 名称查找: **在当前所在`frame`**, 按照以下顺序查找:
-    1.  `frame->f_locals`(包含局部变量和嵌套函数间的变量)
-    2.  `frame->f_globals`
-    3.  `frame->f_builtin`
-- `frame->f_locals`包含: `co_varnames, co_freevars, co_cellvars`中的变量;
 
 #### 4.PVM异常控制
 
