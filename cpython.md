@@ -430,9 +430,7 @@ PyTypeObject PyDict_Type = {
 
 > **pyc文件** : python对程序编译的结果是生成一个`.pyc`文件, 实质是`PyCodeObject`对象, `pyc`文件只是`PyCodeObject`对象在硬盘上的表现形式; 
 >
-> **PyCodeObject对象**: 
->
-> **PyCodeObject对象**范围
+> **PyCodeObject对象**: 会存储**变量名**信息, 字节码信息, 
 >
 > 解释器通过`PyMarshal_WriteObjectToFile`写入pyc文件, 通过`PyMarshal_ReadObjectFromFile`加载pyc文件;
 >
@@ -449,8 +447,8 @@ typedef struct {
     PyObject *co_names;         /* 所有的符号 */
     PyObject *co_consts;        /* list, 使用到的常量 */
     PyObject *co_varnames;      /* tuple, 局部变量名 */
-    PyObject *co_freevars;      /* tuple, 嵌套作用域中变量名集合 内层函数属性*/
-    PyObject *co_cellvars;      /* tuple, 嵌套作用域中变量名集合 外层函数属性*/
+    PyObject *co_freevars;      /* tuple, 嵌套作用域中 变量名 集合 内层函数属性*/
+    PyObject *co_cellvars;      /* tuple, 嵌套作用域中 变量名 集合 外层函数属性*/
     ...
 } PyCodeObject;
  ```
@@ -505,7 +503,7 @@ typedef struct {
 
 ### 2.PVM Python虚拟机
 
-> PVM从PyCodeObject对象中依次读入每一条字节码, 并在当前上下文环境中执行, `PyFrameObject`对象;就是PVM对执行环境的抽象;
+> PVM从PyCodeObject对象中依次读入每一条字节码, 并在当前上下文环境中执行, `PyFrameObject`对象; 就是PVM对执行环境的抽象(**变量名和值信息**);
 
 #### 1.栈帧的抽象:`PyFrameObject`
 
@@ -573,7 +571,9 @@ typedef struct {
 - 全局变量的传递:
     - `(创建时的frame)f->f_globals` ---函数定义--> `(函数对象)op->func_globals ` ---函数调用-->  `(函数调用的frame)f->f_globals` ;
 - 闭包变量的传递:
-    - `(创建时的frame)f->f_locals` ---放入栈中--> `(函数对象)op->func_closure` --函数调用--> 
+    - `(创建时的frame)f->f_locals` ---放入栈中--> `(函数对象)op->func_closure` --函数调用--> `(函数调用的frame)f->f_localsplus + co->co_nlocals`
+- 局部变量:
+    - `f->f_localsplus`
 
 
 #### 3.PVM运行框架
@@ -684,6 +684,10 @@ case TARGET(CALL_FUNCTION): {
   - `vectorcall`在函数创建是被初始化为`_PyFunction_Vectorcall`
   - `_PyFunction_Vectorcall()`: 先创建`frame`信息, 最终调用`PyEval_EvalFrameEx()`
 - 函数对象类型: `tp_vectorcall_offset = offsetof(PyFunctionObject, vectorcall)`
+- 函数调用过程中变量的使用:
+  - 全局作用域变量: 由`f_globals`中获取;
+  - 闭包作用域变量: 由`f->f_localsplus`和操作数(偏移量)获取;
+  - 局部作用域变量:`f->f_localsplus + co->co_nlocals`和操作数(偏移量)获取;
 
 #### 3.闭包
 
@@ -720,7 +724,7 @@ case TARGET(MAKE_FUNCTION): {
          +---------------+ <---- f_stacktop 栈顶
          | ...           |
          +---------------+
-        
+            
         freevars = f->f_localsplus + co->co_nlocals;
         /* closure = PyFunction_GET_CLOSURE(func) */
         for (i = 0; i < PyTuple_GET_SIZE(co->co_freevars); ++i) {
