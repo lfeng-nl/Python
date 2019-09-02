@@ -1,4 +1,4 @@
-> 主要参考: [栖迟于一丘](https://www.hongweipeng.com/index.php/series.html), [CPython Internals](<https://github.com/rainyear/CPython-Internals-Lecture-Notes>), <<Python源码剖析>>
+> 主要参考: [栖迟于一丘](https://www.hongweipeng.com/index.php/series.html), [CPython Internals](<https://github.com/rainyear/CPython-Internals-Lecture-Notes>), <<Python源码剖析>>, [Python/C API 参考手册](<https://docs.python.org/zh-cn/3/c-api/index.html>)
 >
 > 工具: [visualize](<http://www.pythontutor.com/visualize.html#mode=edit>)
 >
@@ -41,11 +41,12 @@ typedef struct _object {
 
 - ```c
     typedef struct _typeobject {
-        PyObject_VAR_HEAD
+        PyObject_VAR_HEAD      /* 类型对象相关数据, 类型引用, 类型的类型等信息 */
         const char *tp_name;   /* 类型名 */
-        Py_ssize_t tp_basicsize, tp_itemsize; /*  需要初始空间信息, tp_basicsize: 对象需要的基本大小, tp_itemsize: 元素大小 */
+        /*  该类型实例的字节大小, tp_basicsize: 对象需要的基本大小, tp_itemsize: 元素大小 */
+        Py_ssize_t tp_basicsize, tp_itemsize; 
     
-        // 析构函数
+        /* 析构函数, 当引用计数为零时, 由Py_DECREF()调用, 用于释放实例的空间, 最后调用类型的tp_free函数 */
         destructor tp_dealloc;
     
         // 结构体, 包含一系列的数的操作, 加减乘除等
@@ -53,6 +54,14 @@ typedef struct _object {
         // 结构体, 包含一系列的可迭代对象的操作, 长度, 替换, 取元素等
         PySequenceMethods *tp_as_sequence;
         PyMappingMethods *tp_as_mapping;
+        /* hash函数 */
+        hashfunc tp_hash;
+        /* 实现类型实例可调用 */
+        ternaryfunc tp_call;
+        /* 继承的基类 */
+        PyObject *tp_base;
+        /* 初始值NULL, 在PyType_Ready()中,  
+        PyObject *tp_dict;
         ...
         // 对象销毁函数
         vectorcallfunc tp_vectorcall;
@@ -886,6 +895,12 @@ struct _ts {
 >       2.  `is-instance-of`: 类和实例之间的关系, 通过`isinstanceof`判断, 也可以通过对象的`__class__`属性和`type`方法探测;
 
 ![类和对象关系](./image/类和对象关系.png)
+
+-   `type`和`object`:
+    -   任何一个对象都有一个type, 可以通过`__class__`属性获得;
+    -   任何一个`class`对象都直接或间接与`<type ‘object’>`对象之间存在`is-kind-of`的关系;
+-   可调用性: 只要实现了`__call__`操作, 就是可调用的对象. python中所谓的调用就是执行`type`所对应的`tp_call`;
+-   
 
 ## I.C语言回顾
 
