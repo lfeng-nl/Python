@@ -567,7 +567,7 @@ typedef struct {
 
 #### 3.PVM运行框架
 
-> PVM的具体实现就是 `PyEval_EvalFrameEx `函数;
+> PVM的具体实现就是 `PyEval_EvalFrameEx `函数, 内容就是执行进程对象的`eval_frame()`方法; 
 >
 > 虚拟机是对CPU的抽象, 运行过程就是遍历`PyCodeObject`对象的`co_code`字节码, 并执行指令的过程;
 
@@ -615,35 +615,33 @@ fast_next_opcode:                    /* 每条指令执行成功, 跳到此处 *
 
 ### 3.函数对象和函数调用
 
-> `PyFunctionObject`是对python代码在运行时动态产生的,  在执行`def`语句是创建; 包含函数的代码信息`func_code`, 上下文信息`f_globals`
->
-> 
+> `PyFunctionObject`是对python代码在运行时动态产生的,  在执行`def`语句是创建; 
 
 #### 1.函数对象
 
 - ```c
   typedef struct {
       PyObject_HEAD               /* 本身也是一个对象 */
-      PyObject *func_code;        /* code对象, __code__ 属性 */
-      PyObject *func_globals;     /* 字典对象, 全局变量 */
-      PyObject *func_defaults;    /* NULL or a tuple */
+      PyObject *func_code;        /* code对象, 对应函数对象的__code__ 属性 */
+      PyObject *func_globals;     /* 全局变量, 对应函数对象的__global__属性 */
+      PyObject *func_defaults;    /* 元祖, 默认参数, 对应函数对象的__defaults__属性*/
       PyObject *func_kwdefaults;  /* NULL or a dict */
-      PyObject *func_closure;     /* 嵌套作用域中的信息 */
+      PyObject *func_closure;     /* 外层嵌套作用域中的信息, 对应函数对象的__closure__属性 */
       ...
       vectorcallfunc vectorcall;
   ...
   } PyFunctionObject;
   ```
 
-- `func_globals`: 对应`__globals__`属性, 指向所在`frame`的`f_global`, 当`f_global`发生变化, `__global__`也可以感知到;
+- `func_globals`: **对应Python中函数对象的`__globals__`属性**, 指向所在`frame->f_global`, 当`frame->f_global`发生变化, `__global__`也可以感知到;
 
-- python在执行`def`语句时, 会在`MAKE_FUNCTION`指令过程中调用`PyFunction_NewWithQualName`创建一个函数对象, :
+- Python在执行`def`语句时, 会在`MAKE_FUNCTION`指令过程中调用`PyFunction_NewWithQualName()`创建一个函数对象, :
 
   1. 申请空间;
   2. 初始化: 
-      1. `op->func_code = code;`
-      2. ` op->func_globals = globals;`
-      3. ` op->func_name = ((PyCodeObject *)code)->co_name;`
+      1. `op->func_code = code;` 在栈中记录
+      2. ` op->func_globals = globals;` frame->f_globals
+      3. ` op->func_name = ((PyCodeObject *)code)->co_name;` 栈中记录
       4. ` op->vectorcall = _PyFunction_Vectorcall;`
   
 -  函数的名字空间:
@@ -682,48 +680,58 @@ case TARGET(CALL_FUNCTION): {
 
 > 闭包通过函数嵌套完成, 相关属相有`co_freevars,co_cellvars`
 
-```c
-// 内存函数的创建
-case TARGET(MAKE_FUNCTION): {
-    // 创建 PyFunctionObject 
-    PyFunctionObject *func = (PyFunctionObject *)
-        PyFunction_NewWithQualName(codeobj, f->f_globals, qualname);
-    // 如果是创建内层函数, 取出 嵌套区域名称空间 赋值给func_closure
-    if (oparg & 0x08) {
-        assert(PyTuple_CheckExact(TOP()));
-        func ->func_closure = POP();
-    }
-}
-```
+-   嵌套作用域中的信息存储: 
 
--   内存函数创建时, 嵌套作用域中的名字信息存放在`func_glosure`中;
-
--   在函数调用时: 通过`closure = PyFunction_GET_CLOSURE(func)`, 取出函数对象中的嵌套作用域信息;
-
--   嵌套作用域中的信息在`_PyEval_EvalCodeWithName()`中, 被拷贝到栈中:
+    -   函数创建时, 通过特殊操作数`oparg & 0x08`, 存储嵌套作用域空间数据到函数对象;
 
     -   ```c
-         +---------------+ <---- f_localsplus
-         | locals        |   
-         |   - - - - -   +  <--- freevars(中间过程)
-         | ..closure     |
-         |               |
-         |---------------+ <---- f_valuestack 栈底
-         | stack         |   <-- 栈信息
-         +---------------+ <---- f_stacktop 栈顶
-         | ...           |
-         +---------------+
-            
-        freevars = f->f_localsplus + co->co_nlocals;
-        /* closure = PyFunction_GET_CLOSURE(func) */
-        for (i = 0; i < PyTuple_GET_SIZE(co->co_freevars); ++i) {
-            PyObject *o = PyTuple_GET_ITEM(closure, i);
-            Py_INCREF(o);
-            freevars[PyTuple_GET_SIZE(co->co_cellvars) + i] = o;
+        // 内存函数的创建
+        case TARGET(MAKE_FUNCTION): {
+            // 创建 PyFunctionObject 
+            PyFunctionObject *func = (PyFunctionObject *)
+                PyFunction_NewWithQualName(codeobj, f->f_globals, qualname);
+            // 如果是创建内层函数, 取出 嵌套区域名称空间 赋值给 内层函数对象的 func_closure
+            if (oparg & 0x08) {
+                assert(PyTuple_CheckExact(TOP()));
+                func ->func_closure = POP();
+            }
         }
         ```
 
-    -   
+-   嵌套作用域中信息的使用:
+
+    -   从函数对象中取出相关信息: `closure = func->func_closure;`
+    -   将信息拷贝到`frame`的`f->f_localsplus + co->co_nlocals`的位置;
+    -   使用时, 使用`freevar = f->f_localsplus + co->co_nlocals;`记录内存位置, 通过**操作数(偏移量)**查到具体的变量信息;
+    -   每次内层函数调用, 都会将函数对象的`func_closure`拷贝到栈帧中, 即使多次调用, 栈帧中的嵌套作用域变量均指向同一个对象, 所以, 信息可以保留;
+
+    -   ```c
+         +---------------+ <---- f_localsplus        -+
+         | locals        |                             \
+         | - - - - - - - + <--- freevar                 +---> 局部变量和嵌套作用域中的变量信息
+         |   closure     |                             /
+         |               |                            /     
+         |---------------+ <---- f_valuestack 栈底  -+
+         | stack         |   <-- 栈信息                      
+         +---------------+ <---- f_stacktop 栈顶        
+         | ...           |                                    
+         +---------------+                                 
+         
+         /*       由函数对象拷贝到frame       */
+        freevars = f->f_localsplus + co->co_nlocals;           // 记录内存的起始位置
+        for (i = 0; i < PyTuple_GET_SIZE(co->co_freevars); ++i) {
+            PyObject *o = PyTuple_GET_ITEM(closure, i);
+            Py_INCREF(o);
+            freevars[PyTuple_GET_SIZE(co->co_cellvars) + i] = o; // 拷贝进行到内存中
+        }
+        
+     /*       由frame中取出     */
+        freevars = f->f_localsplus + co->co_nlocals;          // 记录内存的起始位置
+        PyObject *cell = freevars[oparg];                     // 根据偏移取出对象
+        PyObject *value = PyCell_GET(cell);                   // 取值
+        ```
+        
+
 
 ### 4.运行环境
 
