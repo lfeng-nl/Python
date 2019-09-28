@@ -725,6 +725,8 @@ case TARGET(CALL_FUNCTION): {
             freevars[PyTuple_GET_SIZE(co->co_cellvars) + i] = o; // 拷贝进行到内存中
         }
         
+        ```
+    
      /*       由frame中取出     */
         freevars = f->f_localsplus + co->co_nlocals;          // 记录内存的起始位置
         PyObject *cell = freevars[oparg];                     // 根据偏移取出对象
@@ -900,7 +902,7 @@ struct _ts {
 >
 >   2.  对象之间存在两种关系: `is-kind-of`, `is-instance-of`
 >       1.  `is-kind-of`: 基类和子类之间的关系, 通过`issubclass`判断, 可以通过`__bases__`属性判断;
->       2.  `is-instance-of`: 类和实例之间的关系, 通过`isinstanceof`判断, 也可以通过对象的`__class__`属性和`type`方法探测;
+>       2.  `is-instance-of`: 类和实例之间的关系, 通过`isinstance`判断, 也可以通过对象的`__class__`属性和`type`方法探测;
 
 ![类和对象关系](./image/类和对象关系.png)
 
@@ -908,7 +910,40 @@ struct _ts {
     -   任何一个对象都有一个type, 可以通过`__class__`属性获得;
     -   任何一个`class`对象都直接或间接与`<type ‘object’>`对象之间存在`is-kind-of`的关系;
 -   可调用性: 只要实现了`__call__`操作, 就是可调用的对象. python中所谓的调用就是执行`type`所对应的`tp_call`;
+
+### 1.PyType_Ready
+
+-   用于初始化类信息;
+
+-   ```c
+    int PyType_Ready(PyTypeObject *type)
+    {
+        /* 1. Initialize tp_base (默认是object) */
+        base = type->tp_base;
+        if (base == NULL && type != &PyBaseObject_Type) {
+            base = type->tp_base = &PyBaseObject_Type;
+            Py_INCREF(base);
+        }
+        
+        /* 2. Initialize tp_bases */
+        bases = type->tp_bases;
+        if (bases == NULL) {
+            if (base == NULL)
+                bases = PyTuple_New(0);
+            else
+                bases = PyTuple_Pack(1, base);
+            if (bases == NULL)
+                goto error;
+            type->tp_bases = bases;
+        }
+    }
+    ```
+
 -   
+
+## 4.模块加载
+
+
 
 ## I.C语言回顾
 
