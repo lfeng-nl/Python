@@ -725,14 +725,12 @@ case TARGET(CALL_FUNCTION): {
             freevars[PyTuple_GET_SIZE(co->co_cellvars) + i] = o; // 拷贝进行到内存中
         }
         
-        ```
-    
-     /*       由frame中取出     */
+         /*       由frame中取出     */
         freevars = f->f_localsplus + co->co_nlocals;          // 记录内存的起始位置
         PyObject *cell = freevars[oparg];                     // 根据偏移取出对象
         PyObject *value = PyCell_GET(cell);                   // 取值
         ```
-        
+    
 
 
 ### 4.运行环境

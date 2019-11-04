@@ -56,7 +56,6 @@
   > - 链接法: 映射到同一位置时,将同一位置的元素加入同一个链表;
   > - 开放定址法: 映射到同一位置时, 重新寻找位置, 每个位置最多有一个元素;(**cPython采用此方式**)
 
-  
 
 #### 5.元组 tuple
 
@@ -118,7 +117,7 @@
 - `isinstance(obj, class)`：对象是否是类的实例；
 - `sys.getrefcount()`会返回引用计数；
 - 引用是一种关系，以内存中的指针的形式实现；
-- `Cpython`中, 垃圾回收使用的主要算法是引用计数;
+- `cPython`中, 垃圾回收使用的主要算法是引用计数;
 - 弱引用: 不会增加引用数量;
 - 赋值和深浅复制: 
   - 赋值: 在目标和对象之间建立绑定关系;
@@ -129,14 +128,12 @@
 
 - `range(start, stop, step)`: 默认开始为`0`, 默认步长为`1`; 需要逆序时, 注意步长设置为负; 
 
-- `for...else`: else段在循环自然结束,而不是break时执行, 可以用于清除哨兵变量等操作;
+- `for...else`: `else`段在循环自然结束, 而不是`break`时执行, 可以用于清除哨兵变量等操作;
 - `with`: 上下文管理器, 可作用于含有`__enter__(self), __exit__(self，exc_type, exc_value, traceback)`的对象;
   - 执行过程: 调用`__enter__()`,任何返回值都会绑定到`as`子句 --> 执行代码块 --> 调用`__exit__()`;
   - `contextlib`模块;
 - 负索引: 对于取位置元素的`a[x]`, 可以使用负数, 表示倒数位置;
 - 比较运算符可以任意串联: `a ap1 b op2 c ... y onN z`等价于`a op1 b and b op2 c and ... and y opN z`;
-- 参数注解:
-  - 
 
 ## 2.函数
 
@@ -188,35 +185,7 @@
     -   G：global，全局作用域；
     -   B：builtins , 内置模块的名字空间；
 
-### 4.闭包
-
-- 什么是闭包？为什么需要闭包？
-
-    - 函数和函数内部能访问到的变量（环境）的总和，就是一个闭包。
-
-    - 闭包常常用来「间接访问一个变量」。换句话说，「隐藏一个变量」。我们需要一个类似全局的变量，但是该变量又不能随意暴露出来，就需要闭包。
-
-    - 例如，利用闭包实现计数器：
-
-        ```python
-        def createCounter():
-            r = 0
-            def f():
-                nonlocal r
-                r += 1
-                return r
-            return f
-        
-        f1 = createCounter()
-        f2 = createCounter()
-        f1()  #-->返回 1
-        f1()  #-->返回 2
-        f1()  #-->返回 3
-        f2()  #-->返回 1
-        f1()  #-->返回 4
-        ```
-
-### 5.匿名函数（lambda表达式）
+### 4.匿名函数（lambda表达式）
 
 - 匿名函数（lambda表达式）：只有一个表达式，返回值就是该表达式的结果。`lambda x，y: x*y`,分号前为函数参数，分号后表达式为函数返回值；
 
@@ -226,7 +195,7 @@
 
 -   `list(iterable)`函数，可以把一个可迭代对象转换为列表；
 
--   `[exp for iter_var in iterable]`列表生成式，生成新的`list `，==其中，`iter_var `可以跟exp相关，也可以不相关==
+-   `[exp for iter_var in iterable]`列表生成式，生成新的`list `，**其中，`iter_var `可以跟`exp`相关，也可以不相关**
 
     -   ```python
         [i*i for i in range(10)]
@@ -298,7 +267,7 @@
     -   `end_index `表示结束索引；
     -   `step `表示步长，步长不能为0，且默认值为1，为`-1 `可以逆序切片；
 
-## 5.面向对象 OOP
+## 4.面向对象 OOP
 
 >   OOP：Object Oriented Programming
 
@@ -346,7 +315,7 @@
     class Student(object):
       	def __init__(self, name):
           	self.name = name			# 实例对象属性
-        class = '302'					# 类属性
+        xxx = '302'					    # 类属性
     ```
 
   - 当成员函数的第一个参数不是`self `时，则这个成员函数属于类而不属于事例对象；
@@ -552,62 +521,7 @@
     - `__hash__`：应该同`__eq__()`一同定义， 表示可哈希；
     - `__bases__`: 由基类所组成的元组;
 
-## 6.装饰器, 元类
-
-### 1.装饰器
-
-> 装饰器本质是一个返回可调用对象的可调用对象；
->
-> 函数装饰器语法关键在于，@decorator ---> 相当于 `func = decorator(func)`;
->
-> 也就是被装饰函数 = 装饰器内部的包装函数，包装函数执行额外代码后再调用原有被装饰函数；
-
-- 装饰函数
-
-    ```python
-    def decorator(F):
-        return F
-    
-    @decorator
-    def func(): 
-        ...
-    # 相当于 func = decorator(func)
-    ```
-    
-- 装饰类, 可以用装饰器实现扩展类的功能
-
-  ```python
-  @decorator
-  class C:
-      ...
-  # 等同于
-  class C:
-      C = dcecorator(C)
-  ```
-  
-  
-  
-- 装饰函数编写:
-
-  - ```python
-    import functools
-    # log()返回一个内部函数；
-    def log(func)：
-    	# 修改函数名为func, func.__name__ == func
-    	@functools.wraps(func)
-        def wrapper(*args, **kw):
-            print('call %s'%func.__name)  # --> 包装函数添加的内容
-            return func(*args, **kw)
-        return wrapper
-    # 需要借助python的@语法
-    @log
-    def now():
-        pass
-    # @log 放到函数定义处，相当于执行了，now=log(now),        
-    ```
-
-
-### 2.元类   [参考](http://blog.jobbole.com/21351/)
+### 7.元类   [参考](http://blog.jobbole.com/21351/)
 
 > **重要**: `type`创建类, `__new__()`创建实例;
 >
@@ -645,8 +559,74 @@
   ```
   
 - `__class__`：一个实例所属的类；普通对象就是所属的类，普通类就是`type`或`元类`；
+## 5.装饰器和闭包
 
-## 10.异常、调试和测试
+### 1.装饰器
+
+> 装饰器本质是一个返回可调用对象的可调用对象；
+>
+> 函数装饰器语法关键在于，`@decorator` ---> 相当于 `func = decorator(func)`;
+>
+> 也就是被装饰函数 = 装饰器内部的包装函数，包装函数执行额外代码后再调用原有被装饰函数；
+
+- 装饰函数
+
+    ```python
+    def decorator(F):
+        return F
+    
+    @decorator
+    def func(): 
+        ...
+    # 相当于 func = decorator(func)
+    ```
+    
+- 装饰类, 可以用装饰器实现扩展类的功能
+
+  ```python
+  @decorator
+  class C:
+      ...
+  # 等同于
+  class C:
+      C = dcecorator(C)
+  ```
+  
+- 装饰函数编写:
+
+  - ```python
+    import functools
+    # log()返回一个内部函数；
+    def log(func)：
+    	# 修改函数名为func, func.__name__ == func
+    	@functools.wraps(func)
+        def wrapper(*args, **kw):
+            print('call %s'%func.__name)  # --> 包装函数添加的内容
+            return func(*args, **kw)
+        return wrapper
+    # 需要借助python的@语法
+    @log
+    def now():
+        pass
+    # @log 放到函数定义处，相当于执行了，now=log(now),        
+    ```
+
+-   python内置装饰函数:
+    -   `property`: 将方法转换为属性;
+    -   `classmethod`: 类方法;
+    -   `staticmethod`: 静态方法;
+
+### 2.闭包
+
+- 闭包是一种函数, 它会保留定义函数时存在的自由变量的绑定, 在调用函数时, 仍可以使用这些绑定;
+
+- 实现原理:
+
+  - 外层嵌套作用域中定义的变量会存储在函数对象的`__closure__`属性中; 
+  - 当函数被调用时, 会将`__closure__`拷贝到栈帧中使用. 
+  - 由于都是引用传递, 资源不会被释放;
+
+## 6.异常、调试和测试
 
 > 在函数出错时，c往往会通过返回值表示是否发生错误，这导致正确结果和错误代码混和，一旦出错，还要一级一级上报；所以一般高级语言通常都内置了一套`try...except...finally...`的错误处理机制；
 
