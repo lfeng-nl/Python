@@ -270,6 +270,16 @@
 
 ## 4.面向对象
 
+>   一切类(包括`type, object`)都是`type`的实例;
+>
+>   所有类(包括`type`)都继承于`object`;
+>
+>   python一切皆对象:
+>
+>   1.  **`type`是自身的实例**, `type`继承于`object`, 所以 type is a object; 
+>   2.  所有类都是`type`的实例,  type继承于`object`, 所以 class is a object;
+>   3.  所有类都继承于`object`, 所以对象 is a object;
+
 ### 1.基本语法
 
 - Python中类的创建：
@@ -281,11 +291,8 @@
             self.m2 = y
             ...
          
-    # 通过class关键字定义类；
-        # 通过(object) ：表明继承关系；
-        # 通过__init__(self, ...)初始化类的对象；
         ```
-        
+
     - 成员命名规则：
 
         -   `_xx `：还是`_xx `，只是表明这个成员不想被外部访问；
@@ -305,9 +312,7 @@
           xxx = '302'					    # 类属性
       ```
 
-    - 当成员函数的第一个参数不是`self `时，则这个成员函数属于类而不属于实例对象；
-
-- 动态语言的“鸭子类型”， 它并不要求严格的继承体系，一个对象只要“看起来像鸭子，走起路来像鸭子”，那他就可以被看做是鸭子;
+    - 创建类的实例后，可以给 实例绑定任何属性和方法，绑定的属性和方法只跟这个实例对象有关，跟类和其他实例无关；
 
 - 关于对象的一些函数:
 
@@ -317,88 +322,37 @@
     - 使用`getattr(object, name[, default])`获取一个对象的属性;
     - 使用`setattr(object, name, value)`设置一个对象的属性;
 
-### 2.高级特性
+-   `type()` ：1.查看一个类型或变量类型，2.创建一个新类型；通过`type()`函数创建的类和直接写class是完全一样的，因为Python解释器遇到class定义时，仅仅是扫描一下class定义的语法，然后调用`type()`函数创建出class。
 
->  类属性查找策略:
->
-> 1.如果`attr`是一个Python自动产生的属性，找到！(优先级非常高！)
->
-> 2.查找`obj.__class__.__dict__`，如果`attr`存在并且是data descriptor，返回data descriptor的`__get__`方法的结果，如果没有继续在`obj.__class__`的父类以及祖先类中寻找data descriptor
->
-> 3.在`obj.__dict__`中查找，这一步分两种情况，第一种情况是obj是一个普通实例，找到就直接返回，找不到进行下一步。第二种情况是obj是一个类，依次在obj和它的父类、祖先类的`__dict__`中查找，如果找到一个descriptor就返回descriptor的`__get__`方法的结果，否则直接返回attr。如果没有找到，进行下一步。
->
-> 4.在`obj.__class__.__dict__`中查找，如果找到了一个descriptor(插一句：这里的descriptor一定是non-data descriptor，如果它是data descriptor，第二步就找到它了)descriptor的`__get__`方法的结果。如果找到一个普通属性，直接返回属性值。如果没找到，进行下一步。
->
-> 5.很不幸，Python终于受不了。在这一步，它raise AttributeError
+    ```python
+    # 要创建一个class类，type()函数以此传入3个参数：
+    # 1.calss的名称
+    # 2.继承的父类集合，（元组，所以，当只有一个时写法为‘（xxx,）’）
+    # 3.calss的方法名称 和 函数绑定
+    
+    def fn(self, name="world"):
+        print('Hello, %s.'%name)
+        
+    Hello = type("Hello", (object,), dict(hello=fn))
+    ```
 
-- 创建类的示例后，可以给 ==实例==绑定任何属性和方法，绑定的属性和方法只跟这个实例对象有关，跟类和其他实例无关；
+-   **普通方法, 静态方法和类方法**
 
-- 给所有类绑定方法：
+    -   普通方法: 可以理解为一般函数, 第一个参数需要传入一个对象;
+    -   静态方法：嵌套在一个类中，用`@staticmethod`修饰, 没有`self`和`cls`参数, 几乎相当于普通函数, 只是与该类有关联; 
+    -   类方法：相比于普通方法, 传递给它们的第一个参数是一个类对象而不是实例`cls`, 因此可以在方法中调用类相关的属性和方法；用`@classmethod`修饰, 可以通过类和实例调用；`@classonlymethod`: 只能通过类调用, 调用时会判断实例参数`instance`是否为`None`, 是则抛出异常;
+    -   区别点：(归根是两种方法传入参数不同) 1.两者都能通过实例或类调用，2.类方法第一个参数传入类，可以在方法内调用类属性；静态方法无传入参数，无法操作类属性，通常用于设置环境变量等操作；
+    -   抽象方法:  `@abc.abstractmethod`
 
-    -   ```python
-        def test(self):
-            pass
-        ClassName.test = test
-        ```
-
-- 通过槽限制属性: 通过`__slots__`变量，通过给该变量赋值一个元组，来规定允许绑定的属性名称和方法名称；==只对自身类起作用，对通过继承的子类不起作用==；
-
-    -   ```python
-        class A(object):
-            # 只允许存在名为name、age的属性或方法
-            __slots__ = ('name', 'age')
-            pass
-        ```
+-   类属性查找策略:
+    1.  如果`attr`是一个Python自动产生的属性，找到！(优先级非常高！)
+    2.  查找`obj.__class__.__dict__`，如果`attr`存在并且是data descriptor，返回data descriptor的`__get__`方法的结果，如果没有继续在`obj.__class__`的父类以及祖先类中寻找data descriptor
+    3.  在`obj.__dict__`中查找，这一步分两种情况，第一种情况是obj是一个普通实例，找到就直接返回，找不到进行下一步。第二种情况是obj是一个类，依次在obj和它的父类、祖先类的`__dict__`中查找，如果找到一个descriptor就返回descriptor的`__get__`方法的结果，否则直接返回`attr`。如果没有找到，进行下一步。
+    4.  在`obj.__class__.__dict__`中查找，如果找到了一个descriptor(插一句：这里的descriptor一定是non-data descriptor，如果它是data descriptor，第二步就找到它了)descriptor的`__get__`方法的结果。如果找到一个普通属性，直接返回属性值。如果没找到，进行下一步。
+    5.  很不幸，Python终于受不了。在这一步，它`raise AttributeError`
 
 
-- 枚举类：通过`Enum `类定义的类型；`value `属性则是自动赋给成员的`int`变量；
-
-  ```python
-  from enum import Enum
-  Month = Enum('Month', ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'))
-  Month.Jan.value 
-  >> 1
-
-  # 还可以精确的控制枚举类型
-  from enum import Enum, unique
-
-  @unique     #帮助检查保证没有重复值
-  class Weekday(Enum):
-      Sun = 0 # Sun的value被设定为0
-      Mon = 1
-      Tue = 2
-      Wed = 3
-      Thu = 4
-      Fri = 5
-      Sat = 6
-  ```
-
-  - `@unique` 装饰器可以帮助我们检查保证没有重复值；
-
-- `type()` ：1.查看一个类型或变量类型，2.创建一个新类型；通过`type()`函数创建的类和直接写class是完全一样的，因为Python解释器遇到class定义时，仅仅是扫描一下class定义的语法，然后调用`type()`函数创建出class。
-
-  ```python
-  # 要创建一个class类，type()函数以此传入3个参数：
-  # 1.calss的名称
-  # 2.继承的父类集合，（元组，所以，当只有一个时写法为‘（xxx,）’）
-  # 3.calss的方法名称 和 函数绑定
-
-  def fn(self, name="world"):
-      print('Hello, %s.'%name)
-      
-  Hello = type("Hello", (object,), dict(hello=fn))
-  ```
-
-- **普通方法, 静态方法和类方法**
-
-    - 普通方法: 可以理解为一般函数, 第一个参数需要传入一个对象;
-    - 静态方法：嵌套在一个类中，用`@staticmethod`修饰, 没有`self`和`cls`参数, 几乎相当于普通函数, 只是与该类有关联; 
-    - 类方法：相比于普通方法, 传递给它们的第一个参数是一个类对象而不是实例`cls`, 因此可以在方法中调用类相关的属性和方法；用`@classmethod`修饰, 可以通过类和实例调用；`@classonlymethod`: 只能通过类调用, 调用时会判断实例参数`instance`是否为`None`, 是则抛出异常;
-    - 区别点：(归根是两种方法传入参数不同) 1.两者都能通过实例或类调用，2.类方法第一个参数传入类，可以在方法内调用类属性；静态方法无传入参数，无法操作类属性，通常用于设置环境变量等操作；
-    - 抽象方法:  `@abc.abstractmethod`
-
-
-### 3.属性管理
+### 2.属性管理
 
 - `@property `:
 
@@ -434,26 +388,14 @@
 
   - `dir`: 列出对象大多数属性, 默认使用`__dir__()`方法, 未提供时, 返回`__dict__`中的信息;
   - `vars()`: 返回对象的`__dict__`属性;
-- `getattr()`: 从对象总获取指定属性的值, 不存在时返回异常或默认值;
-  - `haattr()`: 是否存在某种属性;
+      - `__dir__()`: 不接受参数, 返回一个表示模块中可访问名称的字符串列表;
+      - `__dict__`: 用来存储**对象**属性的一个字典, 例如在`__init__()`中定义的, 通过实例字节附加上的;
+  - `getattr()`: 从对象总获取指定属性的值, 不存在时返回异常或默认值;
+  - `hasattr()`: 是否存在某种属性;
   - `setattr()`: 将指定属性置为新值;
   
-- 属性描述符
-  - 描述符是实现了特定协议的类,包括`__get__, __set__, __delete__`方法.
 
-###  4.运算符重载
-
-- `__getitem__(self, key)` ：使用`x[key]`索引操作符的时候调用;
-
-- `__setitem__(self, key, value)`：使用`x[key]`索引赋值;
-
-- `__call__` ：实例化对象本身可以做为一个方法，直接对实例进行调用；
-
-- `__add__(self, other)`：重载运算符`+`；此外还有`__radd__, __iadd__`
-
-- `__lt__(), __le__(), __eq__(), __ne__(), __gt__(), __ge__()...`
-
-### 5.Python如何实现继承
+### 3.Python如何实现继承
 
 > 对于每一个定义的类, python 会计算出一个 方法解析顺序列表(MRO), 这个MRO就是一个简单的所有基类的线性顺序表; 可用 `ClassType.__mro__` 查看,_返回一个元组_. 
 >
@@ -470,7 +412,7 @@
 - 混入(mixin)类是指继承两个或两个以上的类, 并将他们的特性混合在一起;
 - python应避免多重继承;
 
-### 6.特殊方法(魔术方法)
+### 4.特殊方法(魔术方法)
 
 > 类中有很多类似`__xxx__`之类的函数，可以作为钩子，实现特殊的功能, 称为魔术方法；[参考](<https://docs.python.org/zh-cn/3/reference/datamodel.html#basic-customization>)
 
@@ -481,6 +423,12 @@
     - `__str__(self)`：返回一个字符串，在实例化对象被`print()`或`str()`调用时调用；
     - `__repr__(self)`: 返回一个字符串, 在`repr()`中调用,**交互式终端中用于提示** , `__str__`不存在时替代`__str__`功能;
     - `__call__()`: 可调用;
+- 运算符重载
+    - `__getitem__(self, key)` ：使用`x[key]`索引操作符的时候调用;
+    - `__setitem__(self, key, value)`：使用`x[key]`索引赋值;
+    - `__call__` ：实例化对象本身可以做为一个方法，直接对实例进行调用；
+    - `__add__(self, other)`：重载运算符`+`；此外还有`__radd__, __iadd__`
+    - `__lt__(), __le__(), __eq__(), __ne__(), __gt__(), __ge__()...`
 - 迭代器
     - `__iter__(self)` ：如果一个类想被用于`for...in `循环，就必须实现一个`__iter__()`方法；该方法返回一个迭代对象，然后，Python的`for`循环就会不断调用该迭代对象的`__next__()` 方法拿到循环的下一个值；
         - 可迭代对象就是含有`__iter__()`方法的对象;
@@ -508,7 +456,7 @@
     - `__hash__`：应该同`__eq__()`一同定义， 表示可哈希；
     - `__bases__`: 由基类所组成的元组;
 
-### 7.元类   [参考](http://blog.jobbole.com/21351/)
+### 5.元类   
 
 > **重要**: `type`创建类, `__new__()`创建实例;
 >
@@ -519,6 +467,8 @@
 > 主要用途: 创建API, 例如 Django的ORM, 
 >
 > `__new__(cls, ...)`, 负责创建类实例的类方法：`cls`, 需要创建实例的类；
+>
+> [参考](http://blog.jobbole.com/21351/)
 
 - 用`class`语句创建的每个类都隐式地使用`type`作为其元类,  即类都是通过`type`构建的. `class`语句默认提供`class Test(metaclass=type):...`, *type创建类*;
 - `type(name, bases, dict)`: 
@@ -546,6 +496,41 @@
   ```
   
 - `__class__`：一个实例所属的类；普通对象就是所属的类，普通类就是`type`或`元类`；
+### 6.其他
+
+-   通过槽限制属性: 通过`__slots__`变量，通过给该变量赋值一个元组，来规定允许绑定的属性名称和方法名称；*只对自身类起作用，对通过继承的子类不起作用*；
+
+    -   ```python
+        class A(object):
+            # 只允许存在名为name、age的属性或方法
+            __slots__ = ('name', 'age')
+            pass
+        ```
+
+-   枚举类：通过`Enum `类定义的类型；`value `属性则是自动赋给成员的`int`变量；
+
+    ```python
+    from enum import Enum
+    Month = Enum('Month', ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'))
+    Month.Jan.value 
+    >> 1
+    
+    # 还可以精确的控制枚举类型
+    from enum import Enum, unique
+    
+    @unique     #帮助检查保证没有重复值
+    class Weekday(Enum):
+        Sun = 0 # Sun的value被设定为0
+        Mon = 1
+        Tue = 2
+        Wed = 3
+        Thu = 4
+        Fri = 5
+        Sat = 6
+    ```
+
+    -   `@unique` 装饰器可以帮助我们检查保证没有重复值；
+
 ## 5.装饰器和闭包
 
 ### 1.装饰器
