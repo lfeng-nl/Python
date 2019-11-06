@@ -397,18 +397,11 @@
 
 ### 3.Python如何实现继承
 
-> 对于每一个定义的类, python 会计算出一个 方法解析顺序列表(MRO), 这个MRO就是一个简单的所有基类的线性顺序表; 可用 `ClassType.__mro__` 查看,_返回一个元组_. 
->
-> super() 会遍历 MRO 列表, 
->
-> `super(type, [object-or-type])`: type 用来定位当前 MRO 的index, 并返回`mro[index + 1] `作为搜索类表, object-or-type 用来生成 MRO, 
+> `ClassType.__mro__`返回一个元组, 就是一个简单的所有基类的线性顺序表;  称为: MRO( **Method Resolution Order** 方法解析列表)列表(子类在前);
 
-- 关于`super()`, 可参考 [super](https://rhettinger.wordpress.com/2011/05/26/super-considered-super/)
-    - `super()`: 实力化一个super对象, 就像父类的一个代理, 通过`__getattribute__`, 遍历`mro`列表中的类并返回第一个满足条件的属性;
-    - `super(type, object)`: 绑定`type`父类的对象, object需要是type的实例;
-    - `super()`: 在方法内, 相当于`super(__class__, <first_arg>)`
-    - 当第二个参数不传时, super未绑定类型;
-    - 
+- `super(cls, inst)`:  [参考1](https://rhettinger.wordpress.com/2011/05/26/super-considered-super/) [参考2]( http://funhacks.net/explore-python/Class/super.html )
+    - 1. 获取`inst`的MRO列表; 2.在MRO中查找`cls`的`index`, 返回下一个类`MRO[index+1]`,
+    - 在方法中调用: `super().method(arg) 等同于 super(__class__, self).method(arg)`
 - 混入(mixin)类是指继承两个或两个以上的类, 并将他们的特性混合在一起;
 - python应避免多重继承;
 
