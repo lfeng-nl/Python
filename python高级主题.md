@@ -11,19 +11,8 @@
 - **事件循环**: asyncio应用的核心, 事件循环会运行异步任务和回调, 执行网络IO,运行子进程;
 
     ```python
-    while True:
-        # self._run_one() 调用当前准备好的回调
-    	self._run_once()
-    	if self._stopping:
-    		break
+    
     ```
-
-    - `self._run_once()`: 
-      - `_scheduled`列表: 存放`TimeHeadle`, 堆结构;
-      - `_ready`列表: 存放`Headle`, 堆结构, 每次执行`_run_once()`更新`_ready`, 然后遍历并调用`handle._run()`;
-      - `_process_events()`: 处理selector事件;
-    - 每个进程中仅有一个事件循环, 可以通过`get_event_loop, set_event_loop`获取或设置;
-    - `call_soon()`: 将`callback`初始化为`events.Handle`, 添加到`_ready`列表中;
     
 - **可等待对象**:   能够在`await`语句中使用的对象. 是具有`__await__()`方法的对象; 
 
@@ -55,7 +44,7 @@
 
     - 协程函数内部,能够使用`await, async for, aysnc with`标识符;
     - 协程内部使用`yield from`表达式将引发`SyntaxError`
-    - 调用`coroutine function`返回一个`coroutine object`对象, 协程对象属于`awaitable`对;
+    - 调用`coroutine function`返回一个`coroutine object`对象, 协程对象属于`awaitable`对象;
 
 - 运行任务或协程:
 

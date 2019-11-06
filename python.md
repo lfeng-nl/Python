@@ -286,13 +286,16 @@
 
     -   ```python
         class Student(object):
+          # 类属性
+          c1 = 'c1'
+          # 成员函数
           def __init__(self, x,y..):
             self.m1 = x
             self.m2 = y
-            ...
+        ...
          
         ```
-
+        
     - 成员命名规则：
 
         -   `_xx `：还是`_xx `，只是表明这个成员不想被外部访问；
@@ -338,19 +341,23 @@
 
 -   **普通方法, 静态方法和类方法**
 
-    -   普通方法: 可以理解为一般函数, 第一个参数需要传入一个对象;
+    -   普通方法: 第一个参数是`self`
     -   静态方法：嵌套在一个类中，用`@staticmethod`修饰, 没有`self`和`cls`参数, 几乎相当于普通函数, 只是与该类有关联; 
     -   类方法：相比于普通方法, 传递给它们的第一个参数是一个类对象而不是实例`cls`, 因此可以在方法中调用类相关的属性和方法；用`@classmethod`修饰, 可以通过类和实例调用；`@classonlymethod`: 只能通过类调用, 调用时会判断实例参数`instance`是否为`None`, 是则抛出异常;
     -   区别点：(归根是两种方法传入参数不同) 1.两者都能通过实例或类调用，2.类方法第一个参数传入类，可以在方法内调用类属性；静态方法无传入参数，无法操作类属性，通常用于设置环境变量等操作；
     -   抽象方法:  `@abc.abstractmethod`
 
--   类属性查找策略:
-    1.  如果`attr`是一个Python自动产生的属性，找到！(优先级非常高！)
-    2.  查找`obj.__class__.__dict__`，如果`attr`存在并且是data descriptor，返回data descriptor的`__get__`方法的结果，如果没有继续在`obj.__class__`的父类以及祖先类中寻找data descriptor
-    3.  在`obj.__dict__`中查找，这一步分两种情况，第一种情况是obj是一个普通实例，找到就直接返回，找不到进行下一步。第二种情况是obj是一个类，依次在obj和它的父类、祖先类的`__dict__`中查找，如果找到一个descriptor就返回descriptor的`__get__`方法的结果，否则直接返回`attr`。如果没有找到，进行下一步。
-    4.  在`obj.__class__.__dict__`中查找，如果找到了一个descriptor(插一句：这里的descriptor一定是non-data descriptor，如果它是data descriptor，第二步就找到它了)descriptor的`__get__`方法的结果。如果找到一个普通属性，直接返回属性值。如果没找到，进行下一步。
-    5.  很不幸，Python终于受不了。在这一步，它`raise AttributeError`
 
+-   `__new__(cls, *args, **kwargs)`: 负责创建实例;
+
+    -   需要调用父类的`__new__`方法, 生成实例, 并返回;
+
+        ```python
+        def __new__(cls, *args, **kwargs):
+            self = super().__new__(cls, *args, **kwargs)
+            # todo
+            return self
+        ```
 
 ### 2.属性管理
 
@@ -451,23 +458,23 @@
 
 ### 5.元类   
 
-> **重要**: `type`创建类, `__new__()`创建实例;
+> **重要**: 
 >
-> 元类就是用来创建类的类, 像类是用来创建实例一样, 元类就是用来创建类的.例如`type`就是一个内建的元类: `type(name, bases, dict)`,
+> **类是`type`的实例,  `__new__(cls)`创建实例, `__init__(self)`初始化实例;**
+>
+> 元类: 继承于`type`, 用于实例化类的类;
 >
 > 元类本身: 1.在定义类的时候, 调用该类的元类, 2.可以拦截类的创建, 3. 修改类的属性等操作,  4.返回修改之后的类;
 >
-> 主要用途: 创建API, 例如 Django的ORM, 
->
-> `__new__(cls, ...)`, 负责创建类实例的类方法：`cls`, 需要创建实例的类；
+> 主要用途: 创建API, 例如 Django的ORM
 >
 > [参考](http://blog.jobbole.com/21351/)
 
 - 用`class`语句创建的每个类都隐式地使用`type`作为其元类,  即类都是通过`type`构建的. `class`语句默认提供`class Test(metaclass=type):...`, *type创建类*;
 - `type(name, bases, dict)`: 
-    - *name* 字符串即类名并且会成为 [`__name__`](https://docs.python.org/zh-cn/3/library/stdtypes.html#definition.__name__) 属性；
-    - *bases* 元组列出基类并且会成为 [`__bases__`](https://docs.python.org/zh-cn/3/library/stdtypes.html#class.__bases__) 属性；
-    - 而 *dict* 字典为包含类主体定义的命名空间并且会被复制到一个标准字典成为 [`__dict__`](https://docs.python.org/zh-cn/3/library/stdtypes.html#object.__dict__) 属性 
+    - `name` 类名, 并且会成为 [`__name__`](https://docs.python.org/zh-cn/3/library/stdtypes.html#definition.__name__) 属性；
+    - `bases` 基类, 元组类型; 并且会成为 [`__bases__`](https://docs.python.org/zh-cn/3/library/stdtypes.html#class.__bases__) 属性；
+    -  `dict` 属性, 字典类型, 并且会被复制到一个标准字典成为 [`__dict__`](https://docs.python.org/zh-cn/3/library/stdtypes.html#object.__dict__) 属性;
 
 
 - ```python
@@ -708,17 +715,15 @@ if __name__ == '__main__':
     -   测试运行器:  `TextTestRunner`, 运行测试用例或测试套件, 结果以文本的形式打印;
 -   测试结果: `TestResult` 用于存储测试结果;
 
-## 7.进程, 线程, 协程
+## 7.进程, 线程
 
 ### 1.多进程
 
-*利用系统原生`fork()`*
+-   利用系统原生`fork()`
+    -   `fork()`：通过`os.fork()`创建进程，同`fork()`一致，父进程中返回子进程ID，子进程返回0；
 
-- `fork()`：通过`os.fork()`创建进程，同`fork()`一致，父进程中返回子进程ID，子进程返回0；
-
-*利用`multiprocessing `模块*
-
-- `multiprocessing `提供了了`Process`类来代表一个进程对象；适用方式：先创建对象，start 方法，join方法，
+-   利用`multiprocessing `模块
+    -   `multiprocessing `提供了了`Process`类来代表一个进程对象；适用方式：先创建对象，start 方法，join方法，
 
 ```python
 from multiprocessing import Process
@@ -746,7 +751,7 @@ if __name__=='__main__':
 
 > GIL：Global Interpreter Lock，全局解释器锁，语言解释器用于同步线程的一种机制，使得任何时刻仅有一个线程。
 >
-> Cpython中依靠GIL，防止多个本地线程执行Python字节码；GIL就是一个防止多线程执行机器码的Mutex；及时有多核CPU，当同时两个线程被调用时，由于锁的存在，只能有一个线程被执行；
+> cPython中依靠GIL，防止多个本地线程执行Python字节码；GIL就是一个防止多线程执行机器码的Mutex；及时有多核CPU，当同时两个线程被调用时，由于锁的存在，只能有一个线程被执行；
 >
 > Python的多线程在多核CPU上，只对IO密集型计算产生正面效果，对于CPU密集型多线程效率会大幅下降；
 >
@@ -759,7 +764,6 @@ if __name__=='__main__':
 - 使用`t = threading.Thread(target=function, name='threadName)`创建Thread对象，将函数同线程绑定；
 - 用`t.start()`启动，用`join()`等待；
 - 线程的执行内容: `Thread.run()`方法,该方法会调用参数`target`, 可以重写该方法;
-  - `start()`: 启动线程的唯一方式; 每个线程只能启动一次, 其中会检查相应的标志位, 满足后会调用`_thread.start_new_thread`创建线程, 并传入`_bootstrap()`, 初始化相应标志和环境并调用 `Thread.run()`;
 
 #### 2.守护线程
 
@@ -786,8 +790,6 @@ if __name__=='__main__':
 
 - `threading.current_thread()`: 返回当前线程对象;
 - `threading.enumerate()`: 返回所有线程列表;
-
-
 
 ## 8.性能
 
@@ -933,17 +935,13 @@ if __name__=='__main__':
   data = json.loads(request.body.decode('utf-8'))
   ```
 
-### 6.log
-
-
-
 ## II.技巧
 
 - `locals() ` ：返回一个字典，包含了函数执行到该时间点时所有定义的一切变量，字典形似为，变量名称和值对应；在Django模版导入上下文时可能有用；(会比较大)
 
 - 由` d = {True:'1', 1:'2', 1.0:'3'}  d[True]=?`引出的问题：
     -   答案为`'3' `，`True, 1, 1.0 `为相同的键值，后面的会覆盖前面的；
-    -   字典判断为相同键值的条件：1.`值是否相同（ __eq__()`方法），2.哈希值是否相同（`__hash__()`方法返回相同值）；
+    -   字典判断为相同键值的条件：1.值是否相同（ `__eq__()`方法），2.哈希值是否相同（`__hash__()`方法返回相同值）；
 
 - 字典类型加双**号，可以转换为关键字参数；
 
@@ -962,7 +960,7 @@ if __name__=='__main__':
     [(1, 'Spring'), (2, 'Summer'), (3, 'Fall'), (4, 'Winter')]
     ```
 
-    - ==可用于遍历时同时得到其下标==
+    - **可用于遍历时同时得到其下标**
 
       ```python
       for index, x in enumerate(list_xx):
