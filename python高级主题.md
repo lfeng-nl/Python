@@ -4,26 +4,43 @@
 
 ## 1.asyncio
 
-> 参考: [深入理解python异步编程](<https://mp.weixin.qq.com/s?__biz=MzIxMjY5NTE0MA==&mid=2247483720&idx=1&sn=f016c06ddd17765fd50b705fed64429c>) [深入理解Python异步编程](<https://mp.weixin.qq.com/s?__biz=MjM5MzgyODQxMQ==&mid=2650370139&idx=1&sn=e4402260d852facb6f3d33ec20ed2be5&chksm=be9ccb0f89eb4219d986b1f15347f226a726f0da34aecbd593c0f61038e65f48d5334aeb2ca3&mpshare=1&scene=1&srcid=&pass_ticket=gLwNW%2BUgDzD3eMKuOQblqsLb05KdJis8nSFBCKEJffXeWuJIDpxEUQiUkGl74q2y#rd>)
+> **协程**: 通过允许多个入口点(函数)在某些位置好挂起(`await`)并恢复执行, 非抢占式的多任务处理; (协程是可以暂停的函数, 类似生成器);
+>
+> **python中协程最早是基于生成器实现,  使用`yield from`语句,对基于生成器的协程的支持 已弃用并计划在 Python 3.10 中移除。**
+>
+> 参考:  
+>
+> ​	[asyncio在python3.5中如何工作](https://snarky.ca/how-the-heck-does-async-await-work-in-python-3-5/ ) 
+>
+> ​	[深入理解python异步编程](<https://mp.weixin.qq.com/s?__biz=MzIxMjY5NTE0MA==&mid=2247483720&idx=1&sn=f016c06ddd17765fd50b705fed64429c>) 
+>
+> ​	[深入理解Python异步编程](<https://mp.weixin.qq.com/s?__biz=MjM5MzgyODQxMQ==&mid=2650370139&idx=1&sn=e4402260d852facb6f3d33ec20ed2be5&chksm=be9ccb0f89eb4219d986b1f15347f226a726f0da34aecbd593c0f61038e65f48d5334aeb2ca3&mpshare=1&scene=1&srcid=&pass_ticket=gLwNW%2BUgDzD3eMKuOQblqsLb05KdJis8nSFBCKEJffXeWuJIDpxEUQiUkGl74q2y#rd>) 
+>
+> ​	[Python协程技术演进](https://segmentfault.com/a/1190000012291369 )
 
-### 1.基础概念
+### 1.技术背景
 
-- **事件循环**: asyncio应用的核心, 事件循环会运行异步任务和回调, 执行网络IO,运行子进程;
+- I/O的方式:
+  -  阻塞I/O:无数据阻塞;
+  - 非阻塞轮询: 无数据立刻返回, 等待若干时间, 再次尝试;
+  - I/O多路复用: 通知内核感兴趣的文件和事件, 由内核通知用户进程;
+    - `select`: 内核通知后遍历获取可读写的文件, 受监控文件数量受参数类型限制; 
+    - `poll`: 使用同`select`类似,  但无参数类型上的限制;
+    - `epoll`: 直接返回准备好的文件描述符, 无需遍历, 性能高;
 
-    ```python
-    
-    ```
-    
+### 2.基础概念
+
+> 参考: [事件循环](https://www.ruanyifeng.com/blog/2013/10/event_loop.html )
+
+- **事件循环**: 在程序中等待并调度事件或消息的编程结构, 可通过`selectors`模块进行读写, 或充当调度程序;
+- 事件循环会监视何时发生了什么事, 以及事件循环所关心的事情何时发生, 然后调度相关代码;
+    - 超时或`asyncio.sleep`的实现: 通过`select(timeout)`的超时控制,  如果可读/写, `select`从阻塞状态返回;
+    - 默认Event Loop: 根据平台`sys.platform`, 确定是`_UnixSelectorEventLoop`或者`_WindowsSelectorEventLoop`;
 - **可等待对象**:   能够在`await`语句中使用的对象. 是具有`__await__()`方法的对象; 
-
-    - **`await`表达式**: 
-        - 挂起协程的执行以等待一个`awaitable`对象, 直到被等待对象执行完毕, 协程才能继续执行;
-        - 只能在`coroutine function`内使用;
-    - 主要有三种类型: **协程, 任务, Future**;
+- 主要有三种类型: **协程, 任务, Future**;
     - **协程**: 通过`async def`定义的函数;
     - **任务**: 用来设置日程以便并发执行协程, 例如`asyncio.create_task()`将协程打包为一个任务;
     - `Future`: 特殊的低层级可等待对象, 表示一个异步操作的最终结果;
-
 - **Task**:
     - 继承自`Future`, 被用来设置日程以便并发执行协程;
     - 通过`asyncio.create_task()`等函数将协程打包为一个任务, 该协程自动排入日程准备立即运行;
@@ -32,20 +49,26 @@
     - `asyncio.isfuture`: 如果是`Future, Task, self._asyncio_future_blocking`返回`True`
     - `asyncio.ensure_future(coro_or_future, *)`:  对`coro_or_future`进行判断转换;
 
-### 2.协程 coroutine, [参考](https://docs.python.org/zh-cn/3.7/library/asyncio-task.html)
+- 表达式:
+  - **`await`表达式**: 
+    - 挂起协程的执行以等待一个`awaitable`对象, 直到被等待对象执行完毕, 协程才能继续执行;
+    - 只能在`coroutine function`内使用;
+  - **`async with`表达式**:
+    - 异步上下文管理器, 
 
-> 让原先需要用异步+回调方式写的代码可以用看似同步的方式写出来, 协程由于不需要线程切换开销,也不需要锁机制, 具有较高的效率.
->
-> Python协程可以在多个位置上挂起和恢复执行. python最开始通过生成器[PEP342](https://www.python.org/dev/peps/pep-0342/)实现协程, 并通过[PEP380](https://www.python.org/dev/peps/pep-0380/)引入`yield from`进行增强; 后引入`PEP492`引入新的语法声明协程:`async def`, 协程函数可以包含`await, async for, sysnc with`关键字
+### 3.协程和任务
 
->  **python中协程最早是基于生成器实现,  使用`yield from`语句,对基于生成器的协程的支持 已弃用并计划在 Python 3.10 中移除。**
+- 协程:
 
-- 协程的定义:`async def func()...`
-
+    - 协程的定义:`async def func()...`
     - 协程函数内部,能够使用`await, async for, aysnc with`标识符;
     - 协程内部使用`yield from`表达式将引发`SyntaxError`
-    - 调用`coroutine function`返回一个`coroutine object`对象, 协程对象属于`awaitable`对象;
+    - 调用协程函数返回一个协程对象, 协程对象属于`awaitable`对象;
 
+- 任务:
+
+    - 可以通过`asyncio.create_task()`将一个协程对象打包为一个任务, 返回一个`Task`对象, 等待被执行;
+    
 - 运行任务或协程:
 
     - `asyncio.run(async_function(xx))`: 运行传入的协程对象;
@@ -56,8 +79,10 @@
 
     - `await task`: 等待一个任务执行; 
 
-    - 并发执行: `asyncio.gather(*aws, loop=None, return_exceptions=False)`: 并发运行`aws`序列中的可等待对象;
+    - **并发执行**: `asyncio.gather(*aws, loop=None, return_exceptions=False)`: 
 
+        - `aws`: 可等待对象;
+        
         - ```python
             async def test(name, number):
                 await asyncio.sleep(number)
@@ -72,20 +97,25 @@
                 )
             ```
 
-- `asyncio.wait_for(aw, timeout)`: 返回协程, 超时等待;
+- **超时等待**
 
-- `asyncio.wait(aws, timeout, return)`: 返回协程,  并发等待, 可以设置超时和返回条件;
+    - `asyncio.wait_for(aw, timeout)`: 返回一个可等待对象, 指定时间后超时;
+    - `asyncio.wait(aws, timeout, return)`: 返回协程,  并发等待, 可以设置超时和返回条件;
 
-- 异步迭代器: 可以在其`__anext__`方法中调用异步代码, 由 [**PEP 492**](https://www.python.org/dev/peps/pep-0492) 引入。
+### 4.协程框架使用
 
-    - 可以在`async for`语句中使用;
-    - 实现了 `__aiter__()`和 `__anext__()` 方法的对象。`__anext__` 必须返回一个 `awaitable`
+- `aiohttp`:
 
-### 3.协程调试
+  ```python
+  import aiohttp
+  
+  async with aiohttp.ClientSession() as session:
+      async with session.get('http://xxxxx') as response:
+          print(response.status)
+          print(await response.text())
+  ```
 
-- 将`PYTHONASYNCIODEBUG`环境变量设为1;
-- `asyncio.run(debug=True)`;
-- 调用`loop.set_debug()`
+  
 
 ## 2.Python函数式编程
 
