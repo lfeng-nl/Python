@@ -715,39 +715,9 @@ if __name__ == '__main__':
     -   测试运行器:  `TextTestRunner`, 运行测试用例或测试套件, 结果以文本的形式打印;
 -   测试结果: `TestResult` 用于存储测试结果;
 
-## 7.进程, 线程
+## 7.并发执行
 
-### 1.多进程
-
--   利用系统原生`fork()`
-    -   `fork()`：通过`os.fork()`创建进程，同`fork()`一致，父进程中返回子进程ID，子进程返回0；
-
--   利用`multiprocessing `模块
-    -   `multiprocessing `提供了了`Process`类来代表一个进程对象；适用方式：先创建对象，start 方法，join方法，
-
-```python
-from multiprocessing import Process
-import os
-
-# 子进程要执行的代码
-def run_proc(name):
-    print('Run child process %s (%s)...' % (name, os.getpid()))
-
-if __name__=='__main__':
-    print('Parent process %s.' % os.getpid())
-    p = Process(target=run_proc, args=('test',))
-    print('Child process will start.')
-    # start()方法启动（创建子进程，去执行指定函数）
-    p.start()
-    # join()方法等待子进程结束，类似wait()或线程中的join
-    p.join()
-    print('Child process end.')
-```
-
-- 进程间通信：`multiprocessing`中的`Queue, Pipes`等；
-- `Pool()` ：用于创建大量的子进程；
-
-### 2.多线程
+### 1.多线程
 
 > GIL：Global Interpreter Lock，全局解释器锁，语言解释器用于同步线程的一种机制，使得任何时刻仅有一个线程。
 >
@@ -790,6 +760,40 @@ if __name__=='__main__':
 
 - `threading.current_thread()`: 返回当前线程对象;
 - `threading.enumerate()`: 返回所有线程列表;
+
+### 2.多进程
+
+-   利用系统原生`fork()`
+    -   `fork()`：通过`os.fork()`创建进程，同`fork()`一致，父进程中返回子进程ID，子进程返回0；
+
+-   利用`multiprocessing `模块
+    -   `multiprocessing `提供了了`Process`类来代表一个进程对象；适用方式：先创建对象，start 方法，join方法，
+
+```python
+from multiprocessing import Process
+import os
+
+# 子进程要执行的代码
+def run_proc(name):
+    print('Run child process %s (%s)...' % (name, os.getpid()))
+
+if __name__=='__main__':
+    print('Parent process %s.' % os.getpid())
+    p = Process(target=run_proc, args=('test',))
+    print('Child process will start.')
+    # start()方法启动（创建子进程，去执行指定函数）
+    p.start()
+    # join()方法等待子进程结束，类似wait()或线程中的join
+    p.join()
+    print('Child process end.')
+```
+
+- 进程间通信：`multiprocessing`中的`Queue, Pipes`等；
+- `Pool()` ：用于创建大量的子进程；
+
+### 3.`concurrent.futures`
+
+> 异步执行回调, 异步执行可以由`ThreadPoolExecutor`或`ProcessPoolExecutor`来实现
 
 ## 8.性能
 
