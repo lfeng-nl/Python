@@ -598,124 +598,7 @@
   - 当函数被调用时, 会将`__closure__`拷贝到栈帧中使用. 
   - 由于都是引用传递, 资源不会被释放;
 
-## 6.异常、调试和测试
-
-> 在函数出错时，c往往会通过返回值表示是否发生错误，这导致正确结果和错误代码混和，一旦出错，还要一级一级上报；所以一般高级语言通常都内置了一套`try...except...finally...`的错误处理机制；
-
-### 1.异常处理
-
-- `try `：来运行代码，如果发生错误，则后续代码不会继续执行，直接跳转到错误处理，即`except`语句块；
-
-- `except`：如果没有发生错误，则此段不会执行；发生错误，会被此段捕获；
-
-- `finally` ：如果有此段，则最后一定会执行(发生不发生异常都会执行), `try...finally`语句可用上下文管理替代；
-
-- `raise `：抛出异常；
-
-- 错误种类：错误也是`class`，所有错误类型都继承自`BaseException`，捕获时不但可以捕获指定类型，还能将子类型同时捕获；
-
-- 可以通过继承`Exception`定义异常类；
-
-    ```python
-    try:
-    	pass
-    except Exception1:
-        # 存在指定异常时会被捕获
-        pass
-    except Exception2:
-        pass
-    else:
-        # 未发生异常捕获时执行
-        pass
-    finally:
-        # 必定执行，无论发生未发生异常
-        pass
-    ```
-
-
-### 2.调试
-
--   `assert 表达式` ：断言，如果表达式为真，继续执行；否则抛出`AssertionError`； python可以在运行时加入大O，`python3 -O xxxx` 关闭`assert`
--   `logging`：同`assert`相比，`logging`不会抛出异常，而且可以输出到文件；
-    -   有`debug,info,warning,error`由低到高几个等级；`logging.debug()， logging.info() ...`
-    -   可以通过`logging.basicConfig(level=logging.INFO)`设置等级；
--   `pdb` ：python调试工具，通过`python -m pdb xxx`启动；
-
-### 3.文档测试
-
->   编写注释时，明确的写出函数的期望输入和输出，然后通过Python的文档测试模块`doctest` 可以直接提取注释中的代码并执行测试
-
-```python
-def test(x):
-    # 文档测试内容
-    '''
-    >>> test(2)
-    2
-    >>> test(4)
-    4
-    '''
-    return x
-
-# 进行文档测试
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
-```
-
-### 4.单元测试
-
->   "测试驱动开发 TDD"；单元测试是用来对一个模块、一个函数或者一个类来进行正确性检验的测试工作。这种以测试为驱动的开发模式最大的好处就是确保一个程序模块的行为符合我们设计的测试用例，在将来修改的时候，可以极大程度地保证该模块行为的正确性；
-
-- 编写单元测试，需要引入python自带的`unittest`模块；
-
-    ```python
-    # 导入单元测试模块
-    import unittest
-    
-    #编写测试类，需要从 unittest.TestCase 继承
-    class TestDict(unittest.TestCase):
-        
-        # 类方法, 所有测试用例调用前调用
-        @classmethod
-        def setUpClass(cls):
-            pass
-        
-        # 类方法, 所有测试用例调用后调用
-        @classmethod
-        def tearDownClas(cls):
-            pass
-        
-        # setUP, 可以用来完成前置工作, 每个测试用例前调用. 如果发生异常, 则测试方法不会被运行;
-        def setUp(self):
-            pass
-        
-        # tearDown, 测试结束后进行清理, 每个测试用例后调用. 如果setUp运行, 无论是否成功, 都会运行 tearDown
-        def tearDown(self):
-            pass
-    
-    	# 每一个测试方法必须以test开头，类似`test_xxx()`形式命名, 内部使用TestCase提供的断言方法, 例如assertEqual 进行测试
-        def test_init(self):
-            d = list(range(10))
-            self.assertEqual(d[0], 0)
-            self.assertEqual(d[2], 2)
-            
-            
-    if __name__ == '__main__':
-        # main 使用 TextTestRunner 运行所有测试用例 
-        unittest.main()
-    ```
-
--   概念:
-
-    -   测试脚手架: 开展测试所需的准备工作, 以及所有相关的清理操作; 例如`setUpClass, tearDownClass, setUp, tearDown, `;
--   测试用例: 以`test`开头的方法, 可以 调用`asserEqual,asserNotEqual, assertTure, assertFalse... `
-    -   测试套件:  `TestSuite`, 可以对测试用例进行组合排序;
-        -   `addTest(test)`: 添加一个测试用例到`TestSuite`; 批量添加`addTests(tests)`;
-        -   `run(result)`: 运行测试套件;
-    -   测试运行器:  `TextTestRunner`, 运行测试用例或测试套件, 结果以文本的形式打印;
--   测试结果: `TestResult` 用于存储测试结果;
-
-## 7.并发执行
+## 6.并发执行
 
 ### 1.多线程
 
@@ -794,6 +677,119 @@ if __name__=='__main__':
 ### 3.`concurrent.futures`
 
 > 异步执行回调, 异步执行可以由`ThreadPoolExecutor`或`ProcessPoolExecutor`来实现
+
+## 7.异常、调试和测试
+
+>   在函数出错时，c往往会通过返回值表示是否发生错误，这导致正确结果和错误代码混和，一旦出错，还要一级一级上报；所以一般高级语言通常都内置了一套`try...except...finally...`的错误处理机制；
+
+### 1.异常处理
+
+-   `try `：来运行代码，如果发生错误，则后续代码不会继续执行，直接跳转到错误处理，即`except`语句块；
+
+-   `except`：如果没有发生错误，则此段不会执行；发生错误，会被此段捕获；
+
+-   `finally` ：如果有此段，则最后一定会执行(发生不发生异常都会执行), `try...finally`语句可用上下文管理替代；
+
+-   `raise `：抛出异常；
+
+-   错误种类：错误也是`class`，所有错误类型都继承自`BaseException`，捕获时不但可以捕获指定类型，还能将子类型同时捕获；
+
+-   可以通过继承`Exception`定义异常类；
+
+    ```python
+    try:
+    	pass
+    except Exception1:
+        # 存在指定异常时会被捕获
+        pass
+    except Exception2:
+        pass
+    else:
+        # 未发生异常捕获时执行
+        pass
+    finally:
+        # 必定执行，无论发生未发生异常
+        pass
+    ```
+
+### 2.调试
+
+-   `assert 表达式` ：断言，如果表达式为真，继续执行；否则抛出`AssertionError`； python可以在运行时加入大O，`python3 -O xxxx` 关闭`assert`
+-   `logging`：同`assert`相比，`logging`不会抛出异常，而且可以输出到文件；
+    -   有`debug,info,warning,error`由低到高几个等级；`logging.debug()， logging.info() ...`
+    -   可以通过`logging.basicConfig(level=logging.INFO)`设置等级；
+-   `pdb` ：python调试工具，通过`python -m pdb xxx`启动；
+
+### 3.单元测试
+
+>   "测试驱动开发 TDD"；单元测试是用来对一个模块、一个函数或者一个类来进行正确性检验的测试工作。这种以测试为驱动的开发模式最大的好处就是确保一个程序模块的行为符合我们设计的测试用例，在将来修改的时候，可以极大程度地保证该模块行为的正确性；
+>
+
+-   概念:
+
+    -   **测试脚手架 test fixture**: 开展测试所需的准备工作, 以及所有相关的清理操作; 
+        -   例如: 创建临时或代理的数据库, 目录, 再或者启动一个服务器进程;
+        -   `setUpClass(cls)`: 类方法, 运行单个类的测试之前调用的方法;
+        -   `tearDownClass(cls)`:  类方法, 单个类的测试运行后调用;
+        -   `setUp(self)`: 运行每个测试方法前都自动被调用;
+        -   `tearDown(self)`: 运行每个测试方法后自动被调用;
+    -   **测试用例**: 单元测试的基本模块, 一个独立的测试单元, 继承`TestCase`, 检查输入特定数据时的响应;
+        -   可以定义若干名称以`test`开头的方法, 例如`test_xxx(self)`, 
+        -   `TestCase`提供了一些方法来检测和断言故障;
+            -   `assertEqual(a, b)`: 相等
+            -   `assertNotEqual(a, b)`: 不等
+            -   `assertTrue(x)`: True
+            -   `assertFalse(x)`: False
+            -   `assertIsNone(x)`: x为None
+            -   `assertIsNotNone(x)`: x不为None
+    -   **测试套件** `TestSuite`: 测试用例或测试套件的集合;
+        -   `addTest(test)`: 添加一个测试用例到`TestSuite`; 批量添加`addTests(tests)`;
+        -   `run(result)`: 运行测试套件;
+    -   **测试运行器**: 用于执行和输出测试结果的组件;
+        -   命令行执行: `python -m unittest test_module`
+        -   `TextTestRunner`, 运行测试用例或测试套件, 结果以文本的形式打印;
+    -   测试结果: `TestResult` 用于存储测试结果;
+
+-   通常,  测试模块放置在项目的`tests`目录中;
+
+    ```python
+    # 导入单元测试模块
+    import unittest
+    
+    #编写测试类，需要从 unittest.TestCase 继承
+    class TestDict(unittest.TestCase):
+        
+        # 类方法, 所有测试用例调用前调用
+        @classmethod
+        def setUpClass(cls):
+            pass
+        
+        # 类方法, 所有测试用例调用后调用
+        @classmethod
+        def tearDownClas(cls):
+            pass
+        
+        # setUP, 可以用来完成前置工作, 每个测试用例前调用. 如果发生异常, 则测试方法不会被运行;
+        def setUp(self):
+            pass
+        
+        # tearDown, 测试结束后进行清理, 每个测试用例后调用. 如果setUp运行, 无论是否成功, 都会运行 tearDown
+        def tearDown(self):
+            pass
+    
+    	# !!! 每一个测试方法必须以test开头，类似`test_xxx()`形式命名, 内部使用TestCase提供的断言方法, 例如assertEqual 进行测试
+        def test_init(self):
+            d = list(range(10))
+            self.assertEqual(d[0], 0)
+            self.assertEqual(d[2], 2)
+            
+            
+    if __name__ == '__main__':
+        # main 使用 TextTestRunner 运行所有测试用例 
+        unittest.main()
+    ```
+
+-   
 
 ## 8.性能
 

@@ -1,8 +1,5 @@
 import unittest
 
-class TestSuiteMethods(unittest.TestSuite):
-    pass
-
 
 class TestStringMethods(unittest.TestCase):
 
