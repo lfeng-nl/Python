@@ -190,6 +190,18 @@
 
 - 匿名函数（lambda表达式）：只有一个表达式，返回值就是该表达式的结果。`lambda x，y: x*y`,分号前为函数参数，分号后表达式为函数返回值；
 
+### 5.函数注解
+
+-   Python3提供的一种句法, 用于为函数声明中的参数和返回值附加元数据,声明参数和返回值类型,范围等信息:
+
+    ```python
+    # text: str类型, max_len: int, 大于0, 默认值为 80, 返回值为str类型
+    def clip(text:str, max_len:'int > 0'=80) -> str:
+        pass
+    ```
+
+-   python对注解仅仅是将其存储在函数`__annotations__`属性中, 并不做检查, 不做强制, 不做验证;
+
 ## 3.迭代
 
 ### 1.列表生成式
@@ -743,8 +755,8 @@ if __name__=='__main__':
             -   `assertIsNone(x)`: x为None
             -   `assertIsNotNone(x)`: x不为None
     -   **测试套件** `TestSuite`: 测试用例或测试套件的集合;
-        -   `addTest(test)`: 添加一个测试用例到`TestSuite`; 批量添加`addTests(tests)`;
-        -   `run(result)`: 运行测试套件;
+        -   `addTest(self, test)`: 添加一个测试用例到`TestSuite`; 批量添加`addTests(tests)`;
+        -   `run(result)`: 运行测试套件, 与遍历运行所有测试用例 
     -   **测试运行器**: 用于执行和输出测试结果的组件;
         -   命令行执行: `python -m unittest test_module`
         -   `TextTestRunner`, 运行测试用例或测试套件, 结果以文本的形式打印;
@@ -789,7 +801,6 @@ if __name__=='__main__':
         unittest.main()
     ```
 
--   
 
 ## 8.性能
 

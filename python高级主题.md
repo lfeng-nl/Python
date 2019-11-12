@@ -121,32 +121,21 @@
 
 > 函数式编程的三大特性: 1.immutable data 不可变数据：默认变量不可变; 2.first class function：使函数像变量一样来使用; 3.尾递归优化：优化递归，每次递归都会重用stack;  关于[*尾调用和尾递归*](http://www.ruanyifeng.com/blog/2015/04/tail-call.html)
 
-### 1.函数注解
+### 1.python高阶函数
 
-- Python3提供的一种句法, 用于为函数声明中的参数和返回值附加元数据,声明参数和返回值类型,范围等信息:
-
-  ```python
-  # text: str类型, max_len: int, 大于0, 默认值为 80, 返回值为str类型
-  def clip(text:str, max_len:'int > 0'=80) -> str:
-      pass
-  ```
-
-- python对注解仅仅是将其存储在函数`__annotations__`属性中, 并不做检查, 不做强制, 不做验证;
-
-### 2.python高阶函数
-
-- `map(func, *iterables)`：将传入的函数以此作用到==可迭代对象==元素，并把结果作为新的==`Iterator`==返回；
+- `map(func, *iterables)`：将传入的函数作用到**可迭代对象**的元素，并把结果作为新的`Iterator`返回；
+- `filter(fuction, Iterable)` 根据函数返回的`True/False`确定**可迭代对象元素的去留**（True，保留）；
+- `all(iterable)`: 全为`True`, 结果才为`True`;
+- `any(iterable)`: 只有有一个元素为`True`, 结果为`True`;
+- `zip(iter1, [, iter2])`: 接收多个序列并将它们的元素组合成元组;
 - `reduce()`: 把一个函数作用在一个序列上, 这个函数必须接收两个参数, `reduce`把结果继续和序列的下一个元素做累积计算,
-- `filter(fuction, Iterable)` 根据函数返回的`True或False`确定==可迭代对象==元素的去留（True，保留）；
 - `sorted(iterable, key, )`, 可以根据key指定的function排序，如`sorted(a, key=abs)`
 
-### 3.支持函数式编程的包
+### 2.支持函数式编程的包
 
 - `operator`: 可以导出一些运算符函数, 以便在函数式编程中使用,例如`operator.mul(a, b) === a*b`
 - `functools`: 用于增强函数功能;
   - `functools.partial`: 基于一个函数创建一个新的可调用对象, 把原函数的某些参数固定.
-
-### 4.装饰器
 
 ## 3.yield的实现原理
 
