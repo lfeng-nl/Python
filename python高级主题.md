@@ -341,10 +341,16 @@ x, y = p0
 >
 > SQLAlchemy 是知名的ORM工具之一
 
-- 连接
-  - `engine = create_engine('mysql://root:passwd@localhost:3306/test')` 
-  - 参数结构`dialect[+driver]://user:password@host/dbname[?key=value..]` 
+- 引擎连接
+  
+  ![结构](./image/sqla_engine_arch.png)
 
+  - 引擎连接: 
+  - 创建:`engine = create_engine('mysql://root:passwd@localhost:3306/test')` 
+  - 参数结构`dialect[+driver]://user:password@host/dbname[?key=value..]` 
+    - `dialect`: 数据库, `mysql, sqlite, oracle`;
+    - `driver`: dbapi, 例如mysql的`mysqlclient, pymysql`
+  
 - 声明映射
 
   - 使用数据库前, 需要先声明表结构对应的类;
@@ -359,7 +365,7 @@ x, y = p0
       class User(Base):
           __tablename__ = 'user'
           id = Column(Integer, primary_key=True)
-          name = Column(String)
+          name = Column(String)	
       ```
 
     - 
