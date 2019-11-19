@@ -298,31 +298,53 @@ x, y = p0
 
 - 将可迭代对象串联,形成一个更大的迭代器;
 
-## 5.contextlib 
+## 5.`contextlib`
 
-> python资源管理: 
+>  此模块为涉及 `with`语句的常见任务提供了实用的程序。 
+>
+> 资源管理: 
 >
 > 1.`try...finally...`, 使用完毕关闭资源;
 >
 > 2.`with...as: pass` : 底层通过`__enter__(), __exit__()`方法实现;
 
-- `@contextmanager`: 装饰一个生成器, `yield`前的代码在`with`调用的时候执行, `yield` 的值作为 `with`接收到的数据, `yield`后的数据在`with`块执行完毕时执行;
+### 1.`contextmanager`
+
+- 装饰器, 将生成器转换为一个上下文管理器;
+
+- `yield`前的代码在`with`调用的时候执行, `yield` 的值作为 `with`接收到的数据, `yield`后的数据在`with`块执行完毕时执行;
 
   - ```python
-    @contextmanager
-    def tag(name):
-        print('<%s>' % name)
-        yield 'hello world'
-        print('</%s>' % name)
+    from contextlib import contextmanager
     
-    with tag('h1') ad f:
-        print(f) 
-    # >>> <h1>
-    # >>> hello
-    # >>> </h1>
+    @contextmanager
+    def managed_resource(*args, **kwds):
+        # 获取资源
+        resource = acquire_resource(*args, **kwds)
+        try:
+            yield resource
+        finally:
+            # 释放资源
+            release_resource(resource)
+    
+    >>> with managed_resource() as resource:
+    ...     # 在代码块结束, 资源被释放, 即使发生异常
     ```
 
-- `closing()`: 查看源码
+### 2.`closing`
+
+- 返回一个上下文管理器, 该管理器在块完成时关闭事务;
+
+- ```python
+  from contextlib import closing
+  
+  # 在代码块结束, 自动调用 f.close() 方法, 释放资源, 而无需关系是否发生异常
+  with closing(<some-module>.open(xxx)) as f:
+      pass
+  
+  ```
+
+  
 
 ## 6.SQLAlchemy
 
@@ -358,6 +380,81 @@ x, y = p0
       ```
 
     - 
+
+#### 1.映射
+
+- 声明映射:
+
+  - ```python
+    from sqlalchemy.ext.declarative import declarative_base
+    from sqlalchemy import Column, Integer, String, ForeignKey
+    Base = declarative_base()
+    class User(Base):
+        __tablename__ = 'users' # 制定表名称
+        id = Column(Integer, primary_key=True)
+        name = Column(String)
+        
+    class Address(Base):
+        __tablename__ = 'address'
+        id = Column(Integer, primary_key=True)
+        user_id = Column(ForeignKey('user.id'))
+        email_address = Column(String)
+    ```
+
+  - 
+
+#### 2.Session
+
+> `Session`是什么? 建立与数据库连接会话, 提供了获取`Query`对象的入口, 
+
+- 获取`session`
+
+  - ```Python
+    # create a configured "Session" class
+    Session = sessionmaker(bind=some_engine)
+    
+    # create a Session
+    session = Session()
+    ```
+
+  - `sessionmaker()`: 仅调用一次, 可以放在`__init__.py`文件中;
+
+  - ` session`的创建和使用周期: 
+
+    - 对于web服务, 一般一次请求处理过程;
+    - 按照特定功能, 从外部管理`session`;
+    -  可以借助`contextmanager`上下文管理, 挂历资源;
+
+- 使用`session`:
+
+  - 查询: `session.query(User).filter_by(name='ed').all()`
+  - 添加: `session.add(user1)`
+  - 删除: `session.delete(obj1)`
+  - 提交:`session.commit()`
+
+- 事务:
+
+  - 
+
+### 3.SQLAlchemy Core
+
+#### 1.定义列和数据类型
+
+- 列定义: `Column('name', type, autoincrement, default, server_default, primary_key, unique, index)`
+  - `autoincrement`: 是否自增;
+  - `default`: 默认值, 数据库层不体现,  `sqlalchemy`在插入数据时处理;
+  - `server_default`:  数据库层设置默认值;
+  - `primary_key`: 主键;
+  - `unique`: 唯一约束;
+  - `index`: 索引;
+- 类型:
+  - `Boolean`: 布尔型, 
+  - `Date`: 日期;
+  - `DateTime`: 日期和时间;
+  - `Enum`: 枚举;
+  - `Integer`: 整型;
+  - `Text`: 文本;
+  - `String`: 字符串, 对应`varchar`, 可指定长度;
 
 ## 7.Pillow
 
