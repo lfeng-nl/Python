@@ -273,6 +273,12 @@ x, y = p0
 
 ### 5.`OrderedDict`有序字典
 
+> 记录插入顺序, 可以使用`move_to_end()`移动到头部,尾部, 或者`popitem()`, 删除头部和尾部元素
+
+- `move_to_end(key, last=True)`: 将现有key移动到有序字典的任一端,`last=Flase`移动到头;
+- `popitem(last=True)`: 移除并返回一个`(key, value)`键值对, 默认移除头部元素;
+
+
 ## 3.threading
 
 > 一些背景知识:
