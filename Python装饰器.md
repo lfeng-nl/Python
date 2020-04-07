@@ -44,9 +44,11 @@ def make_averager():
 
 ## 2.装饰器
 
-> 装饰器本质是一个返回可调用对象的可调用对象；
->
 > 函数装饰器语法关键在于，`@decorator` ---> 相当于 `func = decorator(func)`;
+>
+> 装饰器是一个可调用对象, 其参数是另一个函数(被装饰的函数), 装饰器处理被装饰函数, 然后将其返回.
+>
+> 装饰器在被装饰函数定义后立刻执行.
 >
 > 也就是被装饰函数 = 装饰器内部的包装函数，包装函数执行额外代码后再调用原有被装饰函数；
 
@@ -79,6 +81,7 @@ def make_averager():
 
   ```python
     import functools
+
     # log()返回一个内部函数；
     def log(func)：
       # 修改函数名为func, func.__name__ == func
@@ -87,6 +90,7 @@ def make_averager():
             print('call %s'%func.__name)  # --> 包装函数添加的内容
             return func(*args, **kw)
         return wrapper
+
     # 需要借助python的@语法
     @log
     def now():
@@ -99,4 +103,53 @@ def make_averager():
   - `classmethod`: 类方法;
   - `staticmethod`: 静态方法;
 
-### 2.参数化装饰器
+### 2.装饰器的高级使用
+
+- 双层嵌套实现接收参数的装饰器
+
+  ```python
+  # 装饰器接收参数, 内部定义一个简单装饰器并返回
+  def require_http_methods(request_method_list):
+      """
+      Decorator to make a view only accept particular request methods.  Usage::
+
+          @require_http_methods(["GET", "POST"])
+          def my_view(request):
+              # I can assume now that only GET or POST requests make it this far
+              # ...
+
+      Note that request methods should be in uppercase.
+      """
+      # 定义装饰器
+      def decorator(func):
+
+          # 定义用于替换的函数
+          @wraps(func)
+          def inner(request, *args, **kwargs):
+              # 附加逻辑
+              if request.method not in request_method_list:
+                  response = HttpResponseNotAllowed(request_method_list)
+                  log_response(
+                      'Method Not Allowed (%s): %s', request.method, request.path,
+                      response=response,
+                      request=request,
+                  )
+                  return response
+
+              # 调用被装饰函数
+              return func(request, *args, **kwargs)
+
+          return inner
+
+      # 返回装饰器
+      return decorator
+  ```
+
+- `decorator`: 方便编写装饰器
+
+  ```python
+  @decorator
+  def log(f, *args, **kw):
+    print("log")
+    return f(*args, **kw)
+  ```
