@@ -85,8 +85,10 @@ def clip(text:str, max_len:'int > 0'=80) -> str:
 
 > 高阶函数: 接受函数为参数, 或者把函数作为结果返回的函数.
 
-- `map(func, *iterables)`：将传入的函数作用到**可迭代对象**的元素，并把结果作为新的`Iterator`返回；
-- `filter(fuction, Iterable)` 根据函数返回的`True/False`确定**可迭代对象元素的去留**（True，保留）；
+- `map(func, *iterables)`：将传入的函数作用到**可迭代对象**的元素，并把结果作为新的`Iterator`返回;
+  - `map(lambda x : x*2, data_list)`
+- `filter(fuction, Iterable)` 根据函数返回的`True/False`确定**可迭代对象元素的去留**(True，保留);
+  - `filter(lambda x: x.endswith(','), data_list)`
 - `all(iterable)`: 全为`True`, 结果才为`True`;
 - `any(iterable)`: 只有有一个元素为`True`, 结果为`True`;
 - `zip(iter1, [, iter2])`: 接收多个序列并将它们的元素组合成元组;

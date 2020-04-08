@@ -73,8 +73,7 @@ def make_averager():
   class C:
       ...
   # 等同于
-  class C:
-      C = dcecorator(C)
+  C = decorator(C)
   ```
 
 - 装饰函数编写:
