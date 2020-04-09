@@ -6,15 +6,15 @@
 
 - Python 中类的创建
 
-   ```python
-    class Student(object):
-      # 类属性
-      c1 = 'c1'
-      # 成员函数
-      def __init__(self, x,y..):
-        self.m1 = x
-        self.m2 = y
-    ...
+  ```python
+   class Student(object):
+     # 类属性
+     c1 = 'c1'
+     # 成员函数
+     def __init__(self, x,y..):
+       self.m1 = x
+       self.m2 = y
+   ...
 
   ```
 
@@ -66,17 +66,20 @@
 - 普通方法: 第一个参数是`self`
 
 - 类方法`classmethod`:
+
   - 用`@classmethod`修饰, 可以通过类和实例调用.
     - `@classonlymethod`: 只能通过类调用, 调用时会判断实例参数`instance`是否为`None`, 是则抛出异常;
   - `cls`: 相比于普通方法, 传递给它们的第一个参数是一个类对象`cls`而不是实例`self`, 因此可以在方法中调用类相关的属性和方法.
   - 常见用途: 定义备选构造方法.
 
 - 静态方法`staticmethod`:
+
   - 用`@staticmethod`修饰, 没有`self`和`cls`参数.
   - 就是普通方法, 只是在类中定义, 而不是在模块中.
   - 不是必要选项.
 
 - 区别点：(归根是两种方法传入参数不同) 1.两者都能通过实例或类调用，2.类方法第一个参数传入类，可以在方法内调用类属性；静态方法无传入参数，无法操作类属性，通常用于设置环境变量等操作；
+
   - 抽象方法: `@abc.abstractmethod`
 
 - `__new__(cls, *args, **kwargs)`: 负责创建实例;
@@ -92,42 +95,49 @@
 
 ## 2.属性管理
 
+> Python 中, 数据的属性和处理数据的方法统称为属性.
+
 ### 1.属性限制
 
 - `__slots__`:
-  - 默认情况下, Python在各个实例中名为`__dict__`的**字典**里存储实例属性.
+
+  - 默认情况下, Python 在各个实例中名为`__dict__`的**字典**里存储实例属性.
   - `__slots__`一方面对实例属性做出限制, 另一方面, 避免了`__dict__`字典数据结构存在.
   - `__slots__`仅对自身类有效, 对于子类无效.
+  - 建议: 仅为了节省内存时使用`__slots__`.
 
 - `@property`:
 
-  - 将一个方法转换为属性调用；
-
+  - 将一个方法转换为属性读取；
   - `@property` 还会创建另一个装饰器`@属性名.setter`；负责把`xxx`方法变成属性赋值，不定义`setter`方法，则该属性就为只读的；
 
-    ```python
-    class A(object):
+  ```python
+  class A(object):
 
-        # get方法
-        @property
-        def name(self):
-            return self._name
+      # get方法
+      @property
+      def name(self):
+          return self._name
 
-        # set方法
-        @name.setter
-        def name(self, name):
-            self._name = name
+      # set方法
+      @name.setter
+      def name(self, name):
+          self._name = name
 
-        # 属性删除
-        @name.deleter
-        def name(self):
-            pass
-    ```
+      # 属性删除
+      @name.deleter
+      def name(self):
+          pass
+  ```
 
-- `__getattr__, __getattribute__, __getitem__`:
+- `__getattr__`: 当对象查找属性失败是, 会调用`__getattr__`处理.
+  - 非对象属性, 可以抛出`AttributeError`异常.
+- `__setattr__`: 对属性赋值时调用.
 
-  - `__getitem__`: 实现类似`obj['key']`的运算符重载;
+- , `__getattribute__, __getitem__`:
+
   - `__getattr__`: 实现当属性查询失败时, 自动处理;
+  - `__getitem__`: 实现类似`obj['key']`的运算符重载;
   - `__getattribute__`: 所有属性调用入口. 用`object.__getattribute__(self, attr)`避免循环调用;
 
 - `dir(), getattr(), hasattr(), setattr(), vars()`:
