@@ -244,6 +244,10 @@ a,b=b,a+b
 
 ### 1.迭代器
 
+> 迭代依靠`__iter__`方法, `in`运算符依靠`__contains__`方法.
+>
+> 当对象没有实现`__iter__`, `__contains__`方法时, Python对调用`__getitem__`方法, 使迭代和`in`运算符可用.
+
 - 可迭代对象
 
   - 可迭代对象`collections.Iterable`：可以直接作用于==`for`==循环的对象，包括`list, tuple, dict, set, str, generator, 迭代器, 生成器`等；可以用`isinstance(xxx, collections.Iterable)` 判断是否可迭代；
