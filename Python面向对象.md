@@ -132,37 +132,42 @@
           pass
   ```
 
-- `__getattr__`: 当对象查找属性失败是, 会调用`__getattr__`处理.
+- `__getattr__`: 当对象查找属性失败时, 会调用`__getattr__`处理.
   - 非对象属性, 可以抛出`AttributeError`异常.
 - `__setattr__`: 对属性赋值时调用.
 
-- , `__getattribute__, __getitem__`:
+- `__getattr__, __getattribute__, __getitem__`:
 
-  - `__getattr__`: 实现当属性查询失败时, 自动处理;
+  - `__getattr__`: 当属性查询失败时, 调用;
+  - `__getattribute__`: **所有属性调用入口**. 用`object.__getattribute__(self, attr)`避免循环调用;
   - `__getitem__`: 实现类似`obj['key']`的运算符重载;
-  - `__getattribute__`: 所有属性调用入口. 用`object.__getattribute__(self, attr)`避免循环调用;
 
 - `dir(), getattr(), hasattr(), setattr(), vars()`:
 
-  - `dir`: 列出对象大多数属性, 默认使用`__dir__()`方法, 未提供时, 返回`__dict__`中的信息;
+  - `__dir__`: 方法, 不接受参数, 返回一个表示模块中可访问名称的字符串列表;
+  - `__dict__`: 属性(dict类型), 用来存储实例的属性和值;
+  - `dir`: 列出对象大多数属性
+    - 默认使用`__dir__()`方法, 未提供时, 返回`__dict__`中的信息;
   - `vars()`: 返回对象的`__dict__`属性;
-    - `__dir__()`: 不接受参数, 返回一个表示模块中可访问名称的字符串列表;
-    - `__dict__`: 用来存储**对象**属性的一个字典, 例如在`__init__()`中定义的, 通过实例字节附加上的;
-  - `getattr()`: 从对象总获取指定属性的值, 不存在时返回异常或默认值;
+  - `getattr()`: 获取对象的指定属性的值, 不存在时返回异常或默认值;
   - `hasattr()`: 是否存在某种属性;
   - `setattr()`: 将指定属性置为新值;
 
 ## 3.继承
 
-> `ClassType.__mro__`返回一个元组, 就是一个简单的所有基类的线性顺序表; 称为: MRO( **Method Resolution Order** 方法解析列表)列表(子类在前);
+- MRO: Method Resolution Order 方法解析顺序(子类在前)
+  - 类方法`mro()`: 返回方法解析顺序列表MRO.
+  - `ClassType.__mro__`返回一个元组, 就是MRO;
 
 - `super(cls, inst)`: [参考 1](https://rhettinger.wordpress.com/2011/05/26/super-considered-super/) [参考 2](http://funhacks.net/explore-python/Class/super.html)
-  - 1. 获取`inst`的 MRO 列表; 2.在 MRO 中查找`cls`的`index`, 返回下一个类`MRO[index+1]`,
+  - 构造器, 实例化一个super对象, `inst`是`cls`的实例.
+  - 工作方式: 1.获取`inst`的 MRO 列表; 2.在 MRO 中查找`cls`的`index`, 返回下一个类`MRO[index+1]`. 3.通过`__getattribute__`查找MRO, 返回属性.
   - 在方法中调用: `super().method(arg) 等同于 super(__class__, self).method(arg)`
+
 - 混入(mixin)类是指继承两个或两个以上的类, 并将他们的特性混合在一起;
 - python 应避免多重继承;
 
-## 5.其他
+## 4.其他
 
 - 枚举类：通过`Enum`类定义的类型；`value`属性则是自动赋给成员的`int`变量；
 
