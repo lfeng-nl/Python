@@ -106,3 +106,38 @@ def clip(text:str, max_len:'int > 0'=80) -> str:
 - `operator`: 可以导出一些运算符函数, 以便在函数式编程中使用,例如`operator.mul(a, b) === a*b`
 - `functools`: 用于增强函数功能;
   - `functools.partial`: 基于一个函数创建一个新的可调用对象, 把原函数的某些参数固定.
+
+## 4.单一调度泛型函数
+
+> 泛型函数: 由多个函数组成, 为不同的类型实现相同的操作.
+>
+> 在调度期间应使用那些实现由调度算法确定. 当根据单个参数的类型选择实现时, 称为单一调度.
+>
+> [参考](https://www.python.org/dev/peps/pep-0443/)
+
+- Python代码的常见反模式时检查接收的参数的类型, 以便决定如何处理对象.
+  - *anti-pattern 反面模式 在实践中经常出现但又低效或是有待优化的设计模式*
+
+- 使用`@singledispatch`修饰, 可以定义泛型函数.
+  - 通过`register()`, 注册不同类型的函数实现
+  - 未注册类型会调用原有定义执行
+
+  ```python
+  from functools import singledispatch
+  @singledispatch
+  def fun(arg):
+    print(arg)
+
+  @fun.register(int)
+  def _(arg):
+    pass
+
+  @fun.register(list)
+  def _(arg):
+    pass
+  
+  def str_fun(arg):
+    pass
+
+  fun.register(str, ftr_fun)
+  ```
