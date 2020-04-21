@@ -160,8 +160,34 @@ a,b=b,a+b
 
 > with 语句会设置一个临时的上下文, 交给上下文管理器对象控制, 并负责清理上下文.
 
-- `with`: 可作用于含有`__enter__(self)`, `__exit__(self，exc_type, exc_value, trace)`的对象;
+- `with`: 可作用于含有`__enter__(self)`, `__exit__(self, exc_type, exc_value, traceback)`的对象;
   - 执行过程: 调用`__enter__()`,任何返回值都会绑定到`as`子句 --> 执行代码块 --> 调用`__exit__()`;
+  - `__exit__`参数, 整体类似(sys.):
+    - `exc_type`:异常类
+    - `exc_value`: 异常实例
+    - `traceback`: 一个对象, 该对象封装在异常最初发生的地方的调用堆栈.
+    > `sys.exc_info()`: 获取异常信息, 返回一个元组, (exc_type, exc_value, traceback)
+
+- `contextlib`:
+  - `@contextmanager`: 接受一个`generator`.
+    - 在`__enter__`中: 返回`next(gen)`;
+    - 在`__exit__`中: 1. 无异常, 调用`next(gen)`, 并捕获`StopIteration`; 2.如果有异常, 通过`gen.throw()`, 向生成器抛入异常.
+
+  - `@closing`: 将对象转变为上下文对象. 在`with`结束时调用`close`方法.
+
+  ```python
+  @contextmanager
+  def session_scope(maker):
+    session = make()
+    try:
+        yield session
+        session.commit()
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+  ```
 
 #### 4.特殊的else
 

@@ -20,7 +20,7 @@
   - `bases` 基类, 元组类型; 并且会成为 [`__bases__`](https://docs.python.org/zh-cn/3/library/stdtypes.html#class.__bases__) 属性；
   - `dict` 属性, 字典类型, 并且会被复制到一个标准字典成为 [`__dict__`](https://docs.python.org/zh-cn/3/library/stdtypes.html#object.__dict__) 属性;
 
-* ```python
+  ```python
   # 元类的创建
   # 元类一般以Metaclass结尾,表明是一个元类, 元类是创建类,必须从type类型派生；
   class ListMetaclass(type):
