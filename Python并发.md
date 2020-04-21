@@ -1,5 +1,13 @@
 # Python 并发
 
+>​ [asyncio 在 python3.5 中如何工作](https://snarky.ca/how-the-heck-does-async-await-work-in-python-3-5/)
+>
+>​ [深入理解 python 异步编程](https://mp.weixin.qq.com/s?__biz=MzIxMjY5NTE0MA==&mid=2247483720&idx=1&sn=f016c06ddd17765fd50b705fed64429c)
+>
+> ​ [深入理解 Python 异步编程](https://mp.weixin.qq.com/s?__biz=MjM5MzgyODQxMQ==&mid=2650370139&idx=1&sn=e4402260d852facb6f3d33ec20ed2be5&chksm=be9ccb0f89eb4219d986b1f15347f226a726f0da34aecbd593c0f61038e65f48d5334aeb2ca3&mpshare=1&scene=1&srcid=&pass_ticket=gLwNW%2BUgDzD3eMKuOQblqsLb05KdJis8nSFBCKEJffXeWuJIDpxEUQiUkGl74q2y#rd)
+>
+> ​[Python 协程技术演进](https://segmentfault.com/a/1190000012291369)
+
 ## 1.多线程
 
 > GIL：Global Interpreter Lock，全局解释器锁，语言解释器用于同步线程的一种机制，使得任何时刻仅有一个线程。
@@ -190,43 +198,35 @@ RESULT = _r
 
 > 原有的协程语法还存在许多缺点: 1.由于语法通用, 协程和生成器之间容易混淆; 2.函数是否是协程是由是否含有`yield, yield from`语句决定, 都是依靠`def`定义, 无法同普通函数区分, 维护困难; 3.对协程调用依赖`yield`语句, 无法使用类似`with, for`等语句;
 >
-> PEP492引入新的语法来定义和使用协程;
+> [PEP492](https://www.python.org/dev/peps/pep-0492/)引入新的语法来定义和使用协程;
 
-- `async def`: 定义协程函数;
-- `await EXPR`: 等待表达式, 用于获取协程执行结果;
-- `async with EXPR as VAR`: 异步上下文, 异步等待进入, 异步等待执行代码块, 异步等待退出;
-- 异步迭代器: 实现`__aiter__, __anext__`;
-- `async for TARGET in ITER`: 异步迭代;
+- 协程函数: `async def`
+  - 定义协程函数, 即使函数内部不包含`await`表达式;
+  - 调用后, 返回协程对象`<coroutine object>`;
 
-### 2.`concurrent.futures`
+- Coroutine objects 协程对象(一般说协程, 指的就是协程对象):
+  - 可以通过`inspect.iscoroutine()`判断是否为协程对象;
+  - 具有`.throw(), .send(), .close()`方法;
 
-> 异步执行回调, 异步执行可以由`ThreadPoolExecutor`或`ProcessPoolExecutor`来实现
+- Future-like object:
+  - 具有`__await__`方法, 可以被`await`表达式使用.
 
-### 3.asyncio
+- 等待表达式: `await EXPR`:
+  - 暂停当前函数执行, 并等待可等待对象返回结果;
+  - 可等待对象: 1.协程对象(由协程函数返回); 2.具有`__await__`方法的`Future-like object`;
 
-> **协程**: 通过允许多个入口点(函数)在某些位置好挂起(`await`)并恢复执行, 非抢占式的多任务处理; (协程是可以暂停的函数, 类似生成器);
->
-> **python 中协程最早是基于生成器实现, 使用`yield from`语句,对基于生成器的协程的支持 已弃用并计划在 Python 3.10 中移除。**
->
-> 参考:
->
-> ​ [asyncio 在 python3.5 中如何工作](https://snarky.ca/how-the-heck-does-async-await-work-in-python-3-5/)
->
-> ​ [深入理解 python 异步编程](https://mp.weixin.qq.com/s?__biz=MzIxMjY5NTE0MA==&mid=2247483720&idx=1&sn=f016c06ddd17765fd50b705fed64429c)
->
-> ​ [深入理解 Python 异步编程](https://mp.weixin.qq.com/s?__biz=MjM5MzgyODQxMQ==&mid=2650370139&idx=1&sn=e4402260d852facb6f3d33ec20ed2be5&chksm=be9ccb0f89eb4219d986b1f15347f226a726f0da34aecbd593c0f61038e65f48d5334aeb2ca3&mpshare=1&scene=1&srcid=&pass_ticket=gLwNW%2BUgDzD3eMKuOQblqsLb05KdJis8nSFBCKEJffXeWuJIDpxEUQiUkGl74q2y#rd)
->
-> ​ [Python 协程技术演进](https://segmentfault.com/a/1190000012291369)
+- 异步上下文管理器: `async with`:
+  - 在`enter`和`exit`方法中挂起执行(`await`)的上下文管理器;
+  - 增加`__aenter__, __aexit__`方法, 两者返回一个可等待对象;
 
-#### 1.技术背景
+- 异步迭代器: `async for`:
+  - 异步可迭代对象, 实现`__aiter__`, 返回异步迭代对象;
+  - 异步迭代对象, 实现`__anext__`方法, 调用时返回可等待对象;
+  - `__anext__`停止时抛出`StopAsyncIteration`异常;
 
-- I/O 的方式:
-  - 阻塞 I/O:无数据阻塞;
-  - 非阻塞轮询: 无数据立刻返回, 等待若干时间, 再次尝试;
-  - I/O 多路复用: 通知内核感兴趣的文件和事件, 由内核通知用户进程;
-    - `select`: 内核通知后遍历获取可读写的文件, 受监控文件数量受参数类型限制;
-    - `poll`: 使用同`select`类似, 但无参数类型上的限制;
-    - `epoll`: 直接返回准备好的文件描述符, 无需遍历, 性能高;
+### 2.asyncio
+
+#### 1.时间循环
 
 #### 2.基础概念
 
@@ -315,6 +315,10 @@ RESULT = _r
           print(response.status)
           print(await response.text())
   ```
+
+## 4.concurrent.futures
+
+> 启动并行任务, 异步执行可以由`ThreadPoolExecutor`或`ProcessPoolExecutor`来实现
 
 ## 扩展: yield 的实现原理
 
