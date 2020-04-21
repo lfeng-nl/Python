@@ -80,11 +80,129 @@
 
 ## 3.协程
 
-### 3.`concurrent.futures`
+> `yield`: 从单词字面意思理解: 产出, 让步.
+>
+> python 中, `yield item`产出一个值, 提供给`next()`调用方, 同时, 还会做出让步, 暂停执行生成器, 让调用方继续工作.
+>
+> 此外, `yield`还扩展了: 1.通过`.send()`向生成器发送信息; 2.通过`.throw(...)`让调用方抛出异常, 在生成器中处理; 3.通过`.close()`终止生成器.
+>
+> `yield`可以看做是一种流程控制的方式.
+
+### 1.实现协程, 我们需要什么
+
+> 协程的演进可以参考: [PEP342--通过生成器实现协程](https://www.python.org/dev/peps/pep-0342/) [PEP380--委托子生成器的语法](https://www.python.org/dev/peps/pep-0380/) [PEP492--async和await协程语法](https://www.python.org/dev/peps/pep-0492/)
+
+#### 1.生成器计算平均值
+
+```python
+def averager():
+  total = 0.0
+  count = 0
+  average = None
+  while True:
+    term = yield average
+    total += term
+    count += 1
+    average = total/count
+
+# 创建协程对象
+>>> coro_avg = averager()
+# 预激协程
+>>> next(coro_avg)
+# 发送数据, 计算平均值
+>>> coro_avg.send(10)
+10.0
+>>> coro_avg.send(30)
+20.0
+```
+
+- 生成器协程目前存在的问题:
+  - 需要预激.
+  - 协程终止抛出`StopIteration`, 终止后的返回值只能放在异常中带出.
+  - 仅服务于调用方. 不能像一般函数那样使用(每层都需要处理异常, 停止, 生成值等一系列问题).
+
+#### 2.yield from
+
+> yield from 的主要作用: 打开双向通道, 把最外层的调用方与最内层的子生成器连接起来, 自动传递值和异常.
+>
+> 术语定义:
+>
+> 1.委派生成器: 包含`yield from <iterable>`表达式的生成器函数;
+>
+> 2.子生成器: 从`<iterable>`捕获的生成器.
+
+![yield from](./image/yield_from.png)
+
+- `yield form`的意义:
+  - 1.子生成器产出的值都直接传给委派生成器的调用方(客户端代码)
+  - 2.使用`send()`方法发送给委派生成器的值都直接传递给子生成器.
+  - 3.生成器退出, 返回值放入`StopIteration`中抛出.
+  - 4.`yield from`表达式的值是子生成器终止时传给`StopIteration`异常的参数.
+  - 通俗讲, 就是屏蔽生成器需要的特殊代码, 使得生成器协程能够像一般函数一样方便调用.
+
+```python
+RESULT = yield from EXPR
+
+# 语义上等效于
+# https://www.python.org/dev/peps/pep-0380/
+_i = iter(EXPR)
+try:
+    _y = next(_i)
+except StopIteration as _e:
+    _r = _e.value
+else:
+    while 1:
+        try:
+            _s = yield _y
+        except GeneratorExit as _e:
+            try:
+                _m = _i.close
+            except AttributeError:
+                pass
+            else:
+                _m()
+            raise _e
+        except BaseException as _e:
+            _x = sys.exc_info()
+            try:
+                _m = _i.throw
+            except AttributeError:
+                raise _e
+            else:
+                try:
+                    _y = _m(*_x)
+                except StopIteration as _e:
+                    _r = _e.value
+                    break
+        else:
+            try:
+                if _s is None:
+                    _y = next(_i)
+                else:
+                    _y = _i.send(_s)
+            except StopIteration as _e:
+                _r = _e.value
+                break
+RESULT = _r
+```
+
+#### 3.新的协程语法
+
+> 原有的协程语法还存在许多缺点: 1.由于语法通用, 协程和生成器之间容易混淆; 2.函数是否是协程是由是否含有`yield, yield from`语句决定, 都是依靠`def`定义, 无法同普通函数区分, 维护困难; 3.对协程调用依赖`yield`语句, 无法使用类似`with, for`等语句;
+>
+> PEP492引入新的语法来定义和使用协程;
+
+- `async def`: 定义协程函数;
+- `await EXPR`: 等待表达式, 用于获取协程执行结果;
+- `async with EXPR as VAR`: 异步上下文, 异步等待进入, 异步等待执行代码块, 异步等待退出;
+- 异步迭代器: 实现`__aiter__, __anext__`;
+- `async for TARGET in ITER`: 异步迭代;
+
+### 2.`concurrent.futures`
 
 > 异步执行回调, 异步执行可以由`ThreadPoolExecutor`或`ProcessPoolExecutor`来实现
 
-### 1.asyncio
+### 3.asyncio
 
 > **协程**: 通过允许多个入口点(函数)在某些位置好挂起(`await`)并恢复执行, 非抢占式的多任务处理; (协程是可以暂停的函数, 类似生成器);
 >
@@ -100,7 +218,7 @@
 >
 > ​ [Python 协程技术演进](https://segmentfault.com/a/1190000012291369)
 
-### 1.技术背景
+#### 1.技术背景
 
 - I/O 的方式:
   - 阻塞 I/O:无数据阻塞;
@@ -110,7 +228,7 @@
     - `poll`: 使用同`select`类似, 但无参数类型上的限制;
     - `epoll`: 直接返回准备好的文件描述符, 无需遍历, 性能高;
 
-### 2.基础概念
+#### 2.基础概念
 
 > 参考: [事件循环](https://www.ruanyifeng.com/blog/2013/10/event_loop.html)
 
@@ -139,7 +257,7 @@
   - **`async with`表达式**:
     - 异步上下文管理器,
 
-### 3.协程和任务
+#### 3.协程和任务
 
 - 协程:
 
@@ -198,16 +316,16 @@
           print(await response.text())
   ```
 
-## 3.yield的实现原理
+## 扩展: yield 的实现原理
 
-### 1.python虚拟机的执行流程
+### 1.python 虚拟机的执行流程
 
-- 通过栈帧对象`PyFrameObject`抽象出运行时（栈，指令，符号表，常量表等），通过执行` PyEval_EvalFrameEx` 这个C级别的函数来逐个解析字节码指令; 可调用对象都是通过 `PyEval_EvalFrameEx `来执行自己的`PyFrameObject`的
+- 通过栈帧对象`PyFrameObject`抽象出运行时（栈，指令，符号表，常量表等），通过执行`PyEval_EvalFrameEx` 这个 C 级别的函数来逐个解析字节码指令; 可调用对象都是通过 `PyEval_EvalFrameEx`来执行自己的`PyFrameObject`的
 
 - 以**栈帧**(`PyFrameObject`)为基本单位, 形成一个栈帧链, 执行的时候在这些栈帧链中进行切换; 链表的表头就是当前的运行栈;
-- 在python中, 一个模块, 类以及函数的执行都会产生一个**栈帧**;
+- 在 python 中, 一个模块, 类以及函数的执行都会产生一个**栈帧**;
 
-### 2.generator的实现
+### 2.generator 的实现
 
-- generator的主要实现原理就是保存了当前的栈帧(栈帧中同样记录着当前执行到哪条字节码指令);
+- generator 的主要实现原理就是保存了当前的栈帧(栈帧中同样记录着当前执行到哪条字节码指令);
 - 切换过程: 1.保存当前过程的执行栈(把栈内容`memcpy`到堆中), 2.恢复目标子过程的执行栈, 并恢复栈顶的状态继续执行;
