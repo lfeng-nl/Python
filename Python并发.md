@@ -236,9 +236,20 @@ RESULT = _r
 >
 > 时间循环本身是一个死循环, 直到抛出异常, 或者设置stop标志才会停止.
 
-- 
-
 ##### 2.Futures
+
+> 用来链接低层回调式代码 和高层异步/等待式代码. **代表一个异步运算的最终结果, 线程不安全**
+
+- 相关函数:
+  - `isfuture(obj)`: `Future`实例, `Task`实例, `._asyncio_future_blocking`属性的对象.
+
+- `Future`对象属性和方法:
+  - 状态: `PENDING, CANCELLED, FINISHED`;
+  - `.result()`: 返回结果, 状态必须为`FINISHED`;
+  - `.set_result()`: 状态更新为`FINISHED`, 设置返回结果, 调用回调函数;
+  - `.done()`: future是否完成(`FINISHED, CANCELLED`);
+  - `.add_done_callback()`: 设置完成回调;
+  - `._asyncio_future_blocking`:
 
 ##### 3.事件循环策略
 
