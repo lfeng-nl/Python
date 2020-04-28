@@ -7,6 +7,14 @@
 > ​ [深入理解 Python 异步编程](https://mp.weixin.qq.com/s?__biz=MjM5MzgyODQxMQ==&mid=2650370139&idx=1&sn=e4402260d852facb6f3d33ec20ed2be5&chksm=be9ccb0f89eb4219d986b1f15347f226a726f0da34aecbd593c0f61038e65f48d5334aeb2ca3&mpshare=1&scene=1&srcid=&pass_ticket=gLwNW%2BUgDzD3eMKuOQblqsLb05KdJis8nSFBCKEJffXeWuJIDpxEUQiUkGl74q2y#rd)
 >
 > ​[Python 协程技术演进](https://segmentfault.com/a/1190000012291369)
+>
+> 同步: 发出一个调用时, 没有得到结果前, 该调用就不返回.
+>
+> 异步: 发出调用后, 调用直接返回, 所以没有返回结果.
+>
+> 阻塞: 调用结果返回前, 当前线程被挂起, 调用线程只有在得到结果之后才返回.
+>
+> 非阻塞: 得到结果前, 调用不会阻塞当前线程.
 
 ## 1.多线程
 
