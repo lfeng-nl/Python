@@ -56,3 +56,64 @@
     def start_response(sefl, starus, handers):
     pass
   ```
+
+## 2.socket
+
+## 3.selectors / select 等待 I/O 完成
+
+> selectors: 高级 I/O 复用库.
+>
+> select: 提供了对`select(), poll(), epoll()`等函数的访问.
+
+- `selectors.DefaultSelector()`: 默认的 selector, 使用当前平台可使用的最有效的实现(epoll>poll>select).
+- `selectors.SelectSelector()`: 基于`select`的 selector.
+- `selectors.PollSelector()`: 基于`poll`的 selector.
+- `selectors.EpollSelector()`: 基于`epoll`的 selector.
+- 三者都继承于抽象类`BaseSelector`:
+  - `register()`: 注册某个文件的某个事件;
+  - `select()`: 执行监控, 知道触发监控对象的指定事件. 返回`(key, events)`
+
+```python
+import selectors
+import socket
+
+def accept(sock, mask):
+    conn, addr = sock.accept()  # Should be ready
+    print('accepted', conn, 'from', addr)
+    conn.setblocking(False)
+    sel.register(conn, selectors.EVENT_READ, read)
+
+def read(conn, mask):
+    data = conn.recv(1000)  # Should be ready
+    if data:
+        print('echoing', repr(data), 'to', conn)
+        conn.send(data)  # Hope it won't block
+    else:
+        print('closing', conn)
+        sel.unregister(conn)
+        conn.close()
+
+# 默认 selector
+sel = selectors.DefaultSelector()
+
+# 监听 1234端口
+sock = socket.socket()
+sock.bind(('localhost', 1234))
+sock.listen(100)
+# 非阻塞
+sock.setblocking(False)
+
+# 对 sock 注册可读事件, 回调为 accept
+sel.register(sock, selectors.EVENT_READ, accept)
+
+while True:
+    events = sel.select()
+    for key, mask in events:
+        callback = key.data
+        callback(key.fileobj, mask)
+```
+
+- 低等级模块:
+  - `select.epoll()`: 返回一个`edge poll`对象, 该对象可作为 I/O 事件的边缘触发或水平触发接口.
+  - `select.poll()`: 返回一个`poll`对象, 该对象支持注册和注销文件描述符, 支持对描述符进行轮询以获取 I/O 事件.
+  - `select.select()`: `Unix select`系统调用的直接接口.

@@ -262,10 +262,9 @@ RESULT = _r
   - `_cancelled`: 取消执行的标记;
   - `_run()`: 在指定的上下环境中, 执行回调.
 
-
 ##### 2.Futures
 
-> 用来链接低层回调式代码 和高层异步/等待式代码. **代表一个异步运算的最终结果, 线程不安全**
+> 用来链接底层回调式代码 和高层异步/等待式代码. **代表一个异步运算的最终结果, 线程不安全**
 
 - 相关函数:
   - `isfuture(obj)`: `Future`实例, `Task`实例, `._asyncio_future_blocking`属性的对象.
@@ -276,7 +275,9 @@ RESULT = _r
   - `.set_result()`: 状态更新为`FINISHED`, 设置返回结果, 调用回调函数;
   - `.done()`: future是否完成(`FINISHED, CANCELLED`);
   - `.add_done_callback()`: 设置完成回调;
-  - `._asyncio_future_blocking`:
+  - `._asyncio_future_blocking`
+    - `await`表达式中: `Future`未完成, 置为`True`, 并`yield self`;
+    - 在任务的`.__step()`中, 根据`_asyncio_future_blocking`判定执行流程.
 
 ##### 3.事件循环策略
 
@@ -291,50 +292,43 @@ RESULT = _r
   - `ThreadedChildWatcher`: 为每一个子进程启动一个新的等待线程. 效率高, 但是占用而外内存.
   - `MultiLoopChildWatcher`: 注册`SIGCHLD`信号处理.
 
-#### 2.基础概念
+#### 2.协程和任务
 
-> 参考: [事件循环](https://www.ruanyifeng.com/blog/2013/10/event_loop.html)
+##### 1.协程
 
-- **事件循环**: 在程序中等待并调度事件或消息的编程结构, 可通过`selectors`模块进行读写, 或充当调度程序;
-- 事件循环会监视何时发生了什么事, 以及事件循环所关心的事情何时发生, 然后调度相关代码;
-  - 超时或`asyncio.sleep`的实现: 通过`select(timeout)`的超时控制, 如果可读/写, `select`从阻塞状态返回;
-  - 默认 Event Loop: 根据平台`sys.platform`, 确定是`_UnixSelectorEventLoop`或者`_WindowsSelectorEventLoop`;
-- **可等待对象**: 能够在`await`语句中使用的对象. 是具有`__await__()`方法的对象;
-- 主要有三种类型: **协程, 任务, Future**;
-  - **协程**: 通过`async def`定义的函数;
-  - **任务**: 用来设置日程以便并发执行协程, 例如`asyncio.create_task()`将协程打包为一个任务;
-  - `Future`: 特殊的低层级可等待对象, 表示一个异步操作的最终结果;
-- **Task**:
-  - 继承自`Future`, 被用来设置日程以便并发执行协程;
-  - 通过`asyncio.create_task()`等函数将协程打包为一个任务, 该协程自动排入日程准备立即运行;
-  - 可以使用`cancel()`方法取消任务;
-- **Future**: 用来链接底层回调式代码和高层异步/等待式代码
+- 协程函数定义:`async def func()...`
+- 协程函数内部,能够使用`await, async for, aysnc with`等协程语法.
+- 调用协程函数返回一个协程对象`<coroutine object>`;
+- 协程的执行:
+  - `asyncio.run(coro_fun())`
+  - `await coro_fun()`;
+  - `asyncio.create_task()`: 用于并发运行多个协程, (调用当前进程的事件循环的`create_task`方法)
 
-  - `asyncio.isfuture`: 如果是`Future, Task, self._asyncio_future_blocking`返回`True`
-  - `asyncio.ensure_future(coro_or_future, *)`: 对`coro_or_future`进行判断转换;
+#### 2.可等待对象
 
-- 表达式:
-  - **`await`表达式**:
-    - 挂起协程的执行以等待一个`awaitable`对象, 直到被等待对象执行完毕, 协程才能继续执行;
-    - 只能在`coroutine function`内使用;
-  - **`async with`表达式**:
-    - 异步上下文管理器,
+> 可以在`await`语句中使用, 就是可等待对象. 主要有: 协程对象, Task, Future
 
-#### 3.协程和任务
+#### 3.Task
 
-- 协程:
+> 用于并发的执行协程. 协程通过`asyncio.create_task()`被打包为一个*任务*, 该协程自动排入日程, 并准备立即执行.
+>
+> 事件循环使用协同日程调度, 一个事件循环每次运行一个Task对象, 而一个Task对象会等待一个Future对象完成. 该时间循环会运行其他Task, 回调或IO操作.
 
-  - 协程的定义:`async def func()...`
-  - 协程函数内部,能够使用`await, async for, aysnc with`标识符;
-  - 协程内部使用`yield from`表达式将引发`SyntaxError`
-  - 调用协程函数返回一个协程对象, 协程对象属于`awaitable`对象;
+- 通过`asyncio.create_task()`将一个协程对象打包为一个任务, 返回一个`Task`对象, 该协程将自动排入日程准备立即运行;
 
-- 任务:
+- 全局对象
+  - `_all_tasks`: 所有task集合;
+  - `_current_tasks`: 每个`loop`对应的正在执行的task.
 
-  - 可以通过`asyncio.create_task()`将一个协程对象打包为一个任务, 返回一个`Task`对象, 等待被执行;
+- `Task`对象:
+  - 实例化时, 将`.__setp()`放入事件循环即将调用集合中.
+  - `.__step()`中, 通过`.send()`驱动协程执行.
 
-- 运行任务或协程:
+#### 4.并发运行任务
 
+- `asyncio.gather(*aws)`: 并发运行`aws`序列中的可等待对象;
+- `asyncio.wait_for(aw, timeout)`: 超时等待.
+- `asyncio.as_completed(aws)`: 并发执行可等待对象, 返回一个`Future`对象的迭代器.
   - `asyncio.run(async_function(xx))`: 运行传入的协程对象;
 
     - 底层通过获取事件循环, 调用`loop.run_until_complete()`执行;
