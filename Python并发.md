@@ -1,8 +1,8 @@
 # Python 并发
 
->​ [asyncio 在 python3.5 中如何工作](https://snarky.ca/how-the-heck-does-async-await-work-in-python-3-5/)
+> ​ [asyncio 在 python3.5 中如何工作](https://snarky.ca/how-the-heck-does-async-await-work-in-python-3-5/)
 >
->​ [深入理解 python 异步编程](https://mp.weixin.qq.com/s?__biz=MzIxMjY5NTE0MA==&mid=2247483720&idx=1&sn=f016c06ddd17765fd50b705fed64429c)
+> ​ [深入理解 python 异步编程](https://mp.weixin.qq.com/s?__biz=MzIxMjY5NTE0MA==&mid=2247483720&idx=1&sn=f016c06ddd17765fd50b705fed64429c)
 >
 > ​ [深入理解 Python 异步编程](https://mp.weixin.qq.com/s?__biz=MjM5MzgyODQxMQ==&mid=2650370139&idx=1&sn=e4402260d852facb6f3d33ec20ed2be5&chksm=be9ccb0f89eb4219d986b1f15347f226a726f0da34aecbd593c0f61038e65f48d5334aeb2ca3&mpshare=1&scene=1&srcid=&pass_ticket=gLwNW%2BUgDzD3eMKuOQblqsLb05KdJis8nSFBCKEJffXeWuJIDpxEUQiUkGl74q2y#rd)
 >
@@ -104,11 +104,11 @@
 >
 > 为了方便将生成器链接, 产生了`yield form`.
 >
-> 最终, 为了将协程和生成器区分, 引入`async def,  await`等语法.
+> 最终, 为了将协程和生成器区分, 引入`async def, await`等语法.
 
 ### 1.实现协程, 我们需要什么
 
-> 协程的演进可以参考: [PEP342--通过生成器实现协程](https://www.python.org/dev/peps/pep-0342/) [PEP380--委托子生成器的语法](https://www.python.org/dev/peps/pep-0380/) [PEP492--async和await协程语法](https://www.python.org/dev/peps/pep-0492/)
+> 协程的演进可以参考: [PEP342--通过生成器实现协程](https://www.python.org/dev/peps/pep-0342/) [PEP380--委托子生成器的语法](https://www.python.org/dev/peps/pep-0380/) [PEP492--async 和 await 协程语法](https://www.python.org/dev/peps/pep-0492/)
 
 #### 1.生成器计算平均值
 
@@ -211,21 +211,26 @@ RESULT = _r
 > [PEP492](https://www.python.org/dev/peps/pep-0492/)引入新的语法来定义和使用协程;
 
 - 协程函数: `async def`
+
   - 定义协程函数, 即使函数内部不包含`await`表达式;
   - 调用后, 返回协程对象`<coroutine object>`;
 
 - Coroutine objects 协程对象(一般说协程, 指的就是协程对象):
+
   - 可以通过`inspect.iscoroutine()`判断是否为协程对象;
   - 具有`.throw(), .send(), .close()`方法;
 
 - Future-like object:
+
   - 具有`__await__`方法, 可以被`await`表达式使用.
 
 - 等待表达式: `await EXPR`:
+
   - 暂停当前函数执行, 并等待可等待对象返回结果;
   - 可等待对象: 1.协程对象(由协程函数返回); 2.具有`__await__`方法的`Future-like object`;
 
 - 异步上下文管理器: `async with`:
+
   - 在`enter`和`exit`方法中挂起执行(`await`)的上下文管理器;
   - 增加`__aenter__, __aexit__`方法, 两者返回一个可等待对象;
 
@@ -236,21 +241,26 @@ RESULT = _r
 
 ### 2.asyncio
 
-#### 1.低层级API
+#### 1.低层级 API
 
 ##### 1.事件循环
 
 > `asyncio`应用的核心. 一个进程中最多存在一个事件循环;
 >
-> 事件循环本身是一个死循环, 直到抛出异常, 或者设置stop标志才会停止.
+> 事件循环本身是一个死循环, 直到抛出异常, 或者设置 stop 标志才会停止.
 
 - 当前进程的事件循环, 存储在`_running_loop`中, 事件循环启动时将自身(`self`)存储其中, 退出时清空;
+
   - 可以通过`get_running_loop(), get_event_loop(), set_event_loop(), new_event_loop()` 控制当前进程中的事件循环.
 
 - 关键属性:
   - `._scheduled`: 被调度任务集, 最小堆, 方便取最小值;
-  - `._ready`: 双向链表, 已准备就绪, 可以被执行的任务.
+  - `._ready`: 双向链表, 已准备就绪, 可以被执行的任务, 当`._ready`非空时, `slector`超时时间会被设置为0, 被立刻调用.
   - `._current_handle`: 当前执行任务.
+
+- 添加任务:
+  - `call_at(), call_later()`: 在某个时刻或者延时指定时间调用, 实例化一个`TimerHandle`, 放入调度堆中.
+  - `call_son()`: 立刻调度, 实例化一个`Handle`, 放入`.ready`中.
 
 - 整体流程:
   - 1.使用`select`, 将延时调度任务的最小时间作为超时时间
@@ -267,13 +277,14 @@ RESULT = _r
 > 用来链接底层回调式代码 和高层异步/等待式代码. **代表一个异步运算的最终结果, 线程不安全**
 
 - 相关函数:
+
   - `isfuture(obj)`: `Future`实例, `Task`实例, `._asyncio_future_blocking`属性的对象.
 
 - `Future`对象属性和方法:
   - 状态: `PENDING, CANCELLED, FINISHED`;
   - `.result()`: 返回结果, 状态必须为`FINISHED`;
   - `.set_result()`: 状态更新为`FINISHED`, 设置返回结果, 调用回调函数;
-  - `.done()`: future是否完成(`FINISHED, CANCELLED`);
+  - `.done()`: future 是否完成, (状态为`FINISHED, CANCELLED`);
   - `.add_done_callback()`: 设置完成回调;
   - `._asyncio_future_blocking`
     - `await`表达式中: `Future`未完成, 置为`True`, 并`yield self`;
@@ -288,7 +299,7 @@ RESULT = _r
 - 事件循环策略通过 `get_event_loop(), set_event_loop(), new_event_loop()`控制实现循环.
 
 - 进程监视器
-  - 进程监视器允许定制事件循环如何监视Unix子进程(就是知道子进程何时退出).
+  - 进程监视器允许定制事件循环如何监视 Unix 子进程(就是知道子进程何时退出).
   - `ThreadedChildWatcher`: 为每一个子进程启动一个新的等待线程. 效率高, 但是占用而外内存.
   - `MultiLoopChildWatcher`: 注册`SIGCHLD`信号处理.
 
@@ -312,23 +323,34 @@ RESULT = _r
 
 > 用于并发的执行协程. 协程通过`asyncio.create_task()`被打包为一个*任务*, 该协程自动排入日程, 并准备立即执行.
 >
-> 事件循环使用协同日程调度, 一个事件循环每次运行一个Task对象, 而一个Task对象会等待一个Future对象完成. 该时间循环会运行其他Task, 回调或IO操作.
+> 事件循环使用协同日程调度, 一个事件循环每次运行一个 Task 对象, 而一个 Task 对象会等待一个 Future 对象完成. 该时间循环会运行其他 Task, 回调或 IO 操作.
 
 - 通过`asyncio.create_task()`将一个协程对象打包为一个任务, 返回一个`Task`对象, 该协程将自动排入日程准备立即运行;
 
 - 全局对象
-  - `_all_tasks`: 所有task集合;
-  - `_current_tasks`: 每个`loop`对应的正在执行的task.
+
+  - `_all_tasks`: 所有 task 集合;
+  - `_current_tasks`: 每个`loop`对应的正在执行的 task.
 
 - `Task`对象:
-  - 实例化时, 将`.__setp()`放入事件循环即将调用集合中.
-  - `.__step()`中, 通过`.send()`驱动协程执行.
+
+  > A coroutine wrapped in a Future.
+  >
+  > 继承于 Future
+
+  - 关键属性方法:
+    - `._fut_waiter`: 用于存放协程执行的返回.
+    - `._step()`: 通过`coro.send(None)`, 驱动协程执行.
+    - `._wakeup()`:
+
+  - 实例化时, 将`.__setp()`放入事件循环的`._ready`中(立刻调用).
 
 #### 4.并发运行任务
 
 - `asyncio.gather(*aws)`: 并发运行`aws`序列中的可等待对象;
 - `asyncio.wait_for(aw, timeout)`: 超时等待.
 - `asyncio.as_completed(aws)`: 并发执行可等待对象, 返回一个`Future`对象的迭代器.
+
   - `asyncio.run(async_function(xx))`: 运行传入的协程对象;
 
     - 底层通过获取事件循环, 调用`loop.run_until_complete()`执行;
@@ -348,7 +370,7 @@ RESULT = _r
 
         async def main():
             await asyncio.gater(
-            	test('A', 4),
+              test('A', 4),
                 test('B', 3),
                 test('C', 2),
                 test('D', 1),
