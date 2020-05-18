@@ -2,23 +2,22 @@
 
 ## 1.WSGI
 
-> 定义一种接口, `application(environ, start_response)`, 当请求时, 服务器生成环境信息, 调用指定的接口 app, 传入`environ`环境信息, `start_response`回调, 并接受返回值
+> WSGI: Python Web Server Gateway Interface, 为Python语言定义的**Web服务器**和**Web应用程序或框架**之间的一种简单而通用的接口规范`application(environ, start_response)`.
+>
+> WSGI服务器负责生成环境信息, 调用指定的接口app, 并传入`environ`环境信息, `start_response`回调对象, 并接受返回值
 >
 > [参考](https://www.python.org/dev/peps/pep-3333/)
 
 - 应用程序必须接受两个位置参数;
 
-- `environ`: 字典对象, 包含 CGI 风格的环境变量, 还必须包含 WSGI 所需的环境变量;
+  - `environ`: 字典对象, 包含 CGI 风格的环境变量, 还必须包含WSGI所需的环境变量;
 
-  - `CGI`风格, 大写, 例如,`REQUEST_METHOD`: 请求方式, `"GET", "POST"`;
-  - `WSGI`风格, 小写, 例如`wsgi.version`, wsgi 版本;
+  - `start_response(status, response_headers, exc_info=None)`: 接受两个参数的可调用对象, 用于发送响应头部信息.
 
-- `start_response(status, response_headers, exc_info=None)`: 接受两个参数的可调用对象,
-
-  - status: 格式必须为`"200 ok", "999 Message here"`;
-  - `response_headers`: 格式为`[(head, head_value)]`, list 类型, 元素为包含头部和信息的 tupe,
-  - `exc_info`: 异常信息;
-  - 以上信息会写入 data
+    - `status`: 字符串, 响应状态;
+    - `response_headers`: 格式为`[(head, head_value)]`, list 类型, 元素为包含头部和信息的`tupe`,
+    - `exc_info`: 异常信息;
+    - `start_response('200 OK', [('Content-Type', 'text/html')])`
 
 - `application`必须返回一个可迭代对象, 产生 0 个或多个`byts`类型,
 
@@ -26,6 +25,8 @@
 
   ```python
   from wsgiref.simple_server import WSGIServer, WSGIRequestHandler
+
+
   def application(environ, start_response):
       status = '200 OK'
       response_headers = [('Content-type', 'text/plain')]
@@ -54,12 +55,26 @@
 
     # 接受status, headers, 将数据写入data (HTTTP协议的头部信息)
     def start_response(sefl, starus, handers):
-    pass
+      pass
   ```
 
-## 2.socket
+## 2.ASGI
 
-## 3.selectors / select 等待 I/O 完成
+> 网络协议服务器(特别是Web服务器)和Python应用程序之间的标准接口, 允许处理多种通用协议(HTTP, HTTP/2, WebSocket)
+
+- ASGI组成:
+  - 协议服务器: 将套接字转换为事件消息.
+  - 应用程序:
+
+- 应用程序:
+  - `coroutine application(scope, receive, send)`:
+    - `scope`: 连接作用域, 字典, 包含连接协议, 请求方式, path等信息.
+    - `receive`: 一个可等待的可调用, 
+    - `send`: 一个可等待的可调用调用，将单个事件字典作为位置参数，在发送完成或连接已关闭后返回.
+
+## 3.socket
+
+## 4.selectors / select 等待 I/O 完成
 
 > selectors: 高级 I/O 复用库.
 >
