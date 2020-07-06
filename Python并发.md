@@ -1,12 +1,12 @@
 # Python 并发
 
-> ​ [asyncio 在 python3.5 中如何工作](https://snarky.ca/how-the-heck-does-async-await-work-in-python-3-5/)
+>  [asyncio 在 python3.5 中如何工作](https://snarky.ca/how-the-heck-does-async-await-work-in-python-3-5/)
 >
-> ​ [深入理解 python 异步编程](https://mp.weixin.qq.com/s?__biz=MzIxMjY5NTE0MA==&mid=2247483720&idx=1&sn=f016c06ddd17765fd50b705fed64429c)
+>  [深入理解 python 异步编程](https://mp.weixin.qq.com/s?__biz=MzIxMjY5NTE0MA==&mid=2247483720&idx=1&sn=f016c06ddd17765fd50b705fed64429c)
 >
-> ​ [深入理解 Python 异步编程](https://mp.weixin.qq.com/s?__biz=MjM5MzgyODQxMQ==&mid=2650370139&idx=1&sn=e4402260d852facb6f3d33ec20ed2be5&chksm=be9ccb0f89eb4219d986b1f15347f226a726f0da34aecbd593c0f61038e65f48d5334aeb2ca3&mpshare=1&scene=1&srcid=&pass_ticket=gLwNW%2BUgDzD3eMKuOQblqsLb05KdJis8nSFBCKEJffXeWuJIDpxEUQiUkGl74q2y#rd)
+>  [深入理解 Python 异步编程](https://mp.weixin.qq.com/s?__biz=MjM5MzgyODQxMQ==&mid=2650370139&idx=1&sn=e4402260d852facb6f3d33ec20ed2be5&chksm=be9ccb0f89eb4219d986b1f15347f226a726f0da34aecbd593c0f61038e65f48d5334aeb2ca3&mpshare=1&scene=1&srcid=&pass_ticket=gLwNW%2BUgDzD3eMKuOQblqsLb05KdJis8nSFBCKEJffXeWuJIDpxEUQiUkGl74q2y#rd)
 >
-> ​[Python 协程技术演进](https://segmentfault.com/a/1190000012291369)
+> [Python 协程技术演进](https://segmentfault.com/a/1190000012291369)
 >
 > 同步: 发出一个调用时, 没有得到结果前, 该调用就不返回.
 >
@@ -381,6 +381,10 @@ RESULT = _r
 
   - `asyncio.wait_for(aw, timeout)`: 返回一个可等待对象, 指定时间后超时;
   - `asyncio.wait(aws, timeout, return)`: 返回协程, 并发等待, 可以设置超时和返回条件;
+
+#### 5.运行asyncio程序
+
+- `asycio.run(coro, *)`
 
 ### 4.协程框架使用
 
