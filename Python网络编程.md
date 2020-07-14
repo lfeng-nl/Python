@@ -59,26 +59,49 @@ server.server_forever()
 
 ## 2.ASGI
 
-> `Asynchronous Serve Gateway Interface`: `WSGI`的超集, 网络协议服务器(特别是**Web服务器**)和**Python应用程序之间的标准接口**, 允许处理**多种通用协议(HTTP, HTTP/2, WebSocket)**.
+> `Asynchronous Serve Gateway Interface`:  Django团队提出的一种具有异步功能的服务器网关接口协议, 网络协议服务器(特别是**Web服务器**)和**Python应用程序之间的标准接口**, 允许处理**多种通用协议(HTTP, HTTP/2, WebSocket)**.
 >
-> `ASGI`试图在保持一个简单的应用接口的前提下, 提供一个抽象, 
+> `ASGI`
 >
 > [参考](https://asgi.readthedocs.io/en/latest/index.html)
 
 ### 1.对比wsgi
 
-- `WSGI`是单个可调用的同步应用程序, 它接受请求并返回响应, 不允许使用轮询`HTTP`或者`WebSocket`连接.
+- `WSGI`是**单个可调用的同步应用程序**, 它接受请求并返回响应, 不允许使用轮询`HTTP`或者`WebSocket`连接.
+
 - `ASGI`允许随时从不够用的应用程序线程或进程发送和接收数据, 提供`HTTP/2`和`WebSocket`代码的方法.
-- 
+
+    - 接口形式就是一个异步可调用结构, `coroutine application(scope, receive, send)`
+
+    - 允许应用程序是一个异步函数`async def`;
+
+    - 包含一个连接的详细信息`scope`;
+
+    - 应用向客户端发送消息的异步可调用对象`send`;
+
+    - 应用从客户端接收消息的异步可调用对象`receive`;
+
+        ```python
+        # asgi 应用程序示例
+        async def application(scope, receive, seed):
+            event = await receive()
+            ...
+            await send({"type": "websocket.send"})
+        ```
 
 ### 2.规格
 
 - ASGI组成:
   
-  - **协议服务器**: 将套接字转换为事件消息.
-- **应用程序**: 驻留在协议服务器中, 每个连接中实例化一次, 在事件消息发生时对其进行处理.
+  - **协议服务器**: 将套接字转换为事件消息. 例如`Uvicorn, Daphne`
+  - **应用程序**: 驻留在协议服务器中, 每个连接中实例化一次, 在事件消息发生时对其进行处理.
   
   ![asgi](./image/asgi.png)
+  
+- 事件`Events`: ASGI将协议分解为多个事件, 应用程序针对事件作出反应.
+  
+  - http协议: `http.request, http.disconnect`
+  - websocket协议: `websocket.connect, websocket.send, websocket.receive, websocket.disconnect`
   
 - 接口形式:
   
@@ -88,7 +111,6 @@ server.server_forever()
     - `send`:  用于发送ASGI事件消息的异步函数.
   
   - 每个连接调用`application`一次, 连接寿命由具体的协议规定.
-  - 
 
 ### 3.实现
 
