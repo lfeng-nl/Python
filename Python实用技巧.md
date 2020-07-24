@@ -1,4 +1,4 @@
-## II.技巧
+# Python使用技巧
 
 - `locals()` ：返回一个字典，包含了函数执行到该时间点时所有定义的一切变量，字典形似为，变量名称和值对应；在 Django 模版导入上下文时可能有用；(会比较大)
 
@@ -30,8 +30,7 @@
     for index, x in enumerate(list_xx):
     ```
 
-## III.实用函数
+- python中表示正负无穷
+    - 正无穷: `float('inf')`
+    - 负无穷: `-float('inf')`
 
-- `callable()`: 判断一个对象是否为可调用的, 是返回 True,
-
-- `itertools.chain()`: 将多个可迭代对象整合为一个迭代器,
