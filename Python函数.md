@@ -116,8 +116,9 @@ def clip(text:str, max_len:'int > 0'=80) -> str:
 > [参考](https://www.python.org/dev/peps/pep-0443/)
 
 - Python代码的常见反模式时检查接收的参数的类型, 以便决定如何处理对象.
-  - *anti-pattern 反面模式 在实践中经常出现但又低效或是有待优化的设计模式*
-
+  
+- *anti-pattern 反面模式 在实践中经常出现但又低效或是有待优化的设计模式*
+  
 - 使用`@singledispatch`修饰, 可以定义泛型函数.
   - 通过`register()`, 注册不同类型的函数实现
   - 未注册类型会调用原有定义执行
@@ -141,3 +142,9 @@ def clip(text:str, max_len:'int > 0'=80) -> str:
 
   fun.register(str, ftr_fun)
   ```
+
+## 5.常用内置函数
+
+- `ord`: 返回单个`Unicode`字符对应的值(兼容ASCII)
+- `hex()`: 将整数转换为以`0x`为前缀的字符串.
+
