@@ -31,6 +31,17 @@
     ```
 
 - python中表示正负无穷
-    - 正无穷: `float('inf')`
-    - 负无穷: `-float('inf')`
+    - 正无穷
+    
+        - `float('inf')`
+        - `from math import inf`
+    
+    - 负无穷: 
+    
+        - `-float('inf')`
+    
+        - `from math import inf`
 
+- `eval 和 exec`区别:
+    - `eval`: 执行表达式并求值返回.
+    - `exec`: 可以执行复杂的代码块形式字符串, 但不会有返回值.
