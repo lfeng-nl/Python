@@ -119,6 +119,14 @@ server.server_forever()
 
 ## 3.socket
 
+### 1.流程
+
+### 2.常用设置
+
+- `sock.settimeout()`: 阻塞套接字的操作设置超时.
+- `sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)`: 禁用Nagle算法(包的缓存)
+- `sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)`: 开启TCP的keepalive.
+
 ## 4.selectors / select 等待 I/O 完成
 
 > selectors: 高级 I/O 复用库.

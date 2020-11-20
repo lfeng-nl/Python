@@ -45,3 +45,15 @@
 - `eval 和 exec`区别:
     - `eval`: 执行表达式并求值返回.
     - `exec`: 可以执行复杂的代码块形式字符串, 但不会有返回值.
+
+- python 设置递归深度:
+
+    > Python 解释器堆栈设置有最大深度。此限制可防止无限递归导致的 C 堆栈溢出和 Python 崩溃。
+
+    - `sys.getrecursionlimit()`: 获取递归限制值， 默认值3000.
+
+    - `sys.setrecursionlimit(10000)`: 设置递归限制值.
+
+- `Unicode `码位与字符的转换.
+    - `ord()`: 将字符转换为`Unicode` 码点的整数.
+    - `chr()`: 将`Unicode` 码点的整数转换为字符.
