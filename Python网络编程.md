@@ -127,6 +127,16 @@ server.server_forever()
 - `sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)`: 禁用Nagle算法(包的缓存)
 - `sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)`: 开启TCP的keepalive.
 
+### 3.socketpair
+
+- 构建一对已经连接的套接字对象, 
+
+- ```python
+    s1, s2 = socket.socketpair()
+    ```
+
+- 
+
 ## 4.selectors / select 等待 I/O 完成
 
 > selectors: 高级 I/O 复用库.

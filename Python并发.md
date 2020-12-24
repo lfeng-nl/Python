@@ -55,10 +55,16 @@
   - 通过`lock.acquire()`获取，通过`lock.release()`释放；超过数量获取会阻塞; 默认初始值为 1, 当`release`后, 现有值加一, 允许超过初始值;
   - 相关联: `BoundedSemaphore()`, 大致同`Semaphore`, 区别`release`不允许超过初始值; 否则会抛出`ValueError`异常;
 
-### 5 其他
+### 5 GIL
 
-- `threading.current_thread()`: 返回当前线程对象;
-- `threading.enumerate()`: 返回所有线程列表;
+> Global Interpreter Lock, 在CPython解释器中存在.
+
+- `Python`的线程封装了操作系统的系统线程, 完全受操作系统的管理调度.
+- `GIL`设计目的: 主要是为了方便CPthon解释器层面的编写.
+    - 为了规避类似内存管理这样复杂的竞争问题.
+    - CPython大量使用了C语言库, 大部分C语言库不是线程安全的.
+- `GIL`的存在, 保证了同一时刻, 只有一个python线程在执行. 同时通过定期`check`, 强制线程释放`GIL`, 执行其他线程.
+    - 
 
 ## 2.多进程
 
@@ -68,31 +74,68 @@
 
 - 利用`multiprocessing`模块
 
-  - `multiprocessing`提供了了`Process`类来代表一个进程对象；适用方式：先创建对象，start 方法，join 方法，
+  - `multiprocessing`提供了了`Process`类来代表一个进程对象
+
+  - `join([timeout])`: 阻塞, 直到调用`join`方法的进程终止.
+
+  - ```python
+      from multiprocessing import Process
+      import os
+      
+      # 子进程要执行的代码
+      def run_proc(name):
+          print(&#39;Run child process %s (%s)...&#39; % (name, os.getpid()))
+      
+      if __name__==&#39;__main__&#39;:
+          print(&#39;Parent process %s.&#39; % os.getpid())
+          p = Process(target=run_proc, args=(&#39;test&#39;,))
+          print(&#39;Child process will start.&#39;)
+          # start()方法启动（创建子进程，去执行指定函数）
+          p.start()
+          # join()方法等待子进程结束，类似wait()或线程中的join
+          p.join()
+          print(&#39;Child process end.&#39;)
+      ```
+
+  - 
 
 - 进程间通信：`multiprocessing`中的`Queue, Pipes`等；
-- `Pool()` ：用于创建大量的子进程；
 
-- Demo:
+    - `Pipe`: linux平台基于`socketpair`或者`os.pipe()`实现.
 
-  ```python
-  from multiprocessing import Process
-  import os
+- 同步: 用于进程间共享资源的同步.
 
-  # 子进程要执行的代码
-  def run_proc(name):
-      print('Run child process %s (%s)...' % (name, os.getpid()))
+    - `multipriocessing.Lock`: 基于信号量实现的进程间互斥锁.
+    - `multipriocessing.Semaphore`: 信号量.
 
-  if __name__=='__main__':
-      print('Parent process %s.' % os.getpid())
-      p = Process(target=run_proc, args=('test',))
-      print('Child process will start.')
-      # start()方法启动（创建子进程，去执行指定函数）
-      p.start()
-      # join()方法等待子进程结束，类似wait()或线程中的join
-      p.join()
-      print('Child process end.')
-  ```
+- 共享内存:
+
+    - `Value`: 返回一个从共享内存上创建的`ctypes`对象.
+
+    - `Array`: 从共享内存种申请 并返回一个具有`ctyeps`类型的数组对象.
+
+        ```python
+        from multiprocessing import Process, Value, Array
+        
+        def f(n, a):
+            n.value = 3.1415927
+            for i in range(len(a)):
+                a[i] = -a[i]
+        
+        if __name__ == '__main__':
+            num = Value('d', 0.0)
+            arr = Array('i', range(10))
+        
+            p = Process(target=f, args=(num, arr))
+            p.start()
+            p.join()
+        
+            print(num.value)
+            print(arr[:])
+        ```
+
+    
+
 
 ## 3.协程
 
@@ -106,7 +149,7 @@
 >
 > 最终, 为了将协程和生成器区分, 引入`async def, await`等语法.
 
-### 1.实现协程, 我们需要什么
+### 1.协程的演化
 
 > 协程的演进可以参考: [PEP342--通过生成器实现协程](https://www.python.org/dev/peps/pep-0342/) [PEP380--委托子生成器的语法](https://www.python.org/dev/peps/pep-0380/) [PEP492--async 和 await 协程语法](https://www.python.org/dev/peps/pep-0492/)
 
@@ -241,56 +284,83 @@ RESULT = _r
 
 ### 2.asyncio
 
-#### 1.低层级 API
+#### 1.协程和任务
+
+##### 1.协程
+
+- **定义 **: `async def func()...`
+    - **协程函数**: 使用`async def`定义的函数.
+    - **协程对象**: 调用协程函数返回的对象.
+- 协程函数内部,能够使用`await, async for, aysnc with`等协程语法.
+- 调用协程函数返回一个协程对象`<coroutine object>`;
+- 协程的执行:
+    - `asyncio.run(coro_fun())`
+    - `await coro_fun()`;
+    - `asyncio.create_task()`: 用于并发运行多个协程, (调用当前进程的事件循环的`create_task`方法)
+
+##### 2.Task
+
+> 用于并发的执行协程.
+
+- 创建: `create_task()`: 将**协程对象**打包为一个任务, 并执行.
+- `Task`对象:
+    - 被用来在事件循环中运行协程.
+    - 关键属性方法:
+        - `.result()`:  如果已完成, 返回结果, 否则抛出异常.
+
+#####  3.可等待对象
+
+- 可以在`await`语句中使用, 就是可等待对象. 主要有: *协程对象, Task, Future*
+
+#### 2.高等级API
+
+- 运行任务:
+
+    - `asyncio.run()`: 创建事件循环, 运行协程, 关闭事件循环. 可以在非协程函数中调用协程. 阻塞等待协程执行完毕, 获取返回结果.
+
+    - `asyncio.gather(*aws)`: 并发运行`aws`序列中的可等待对象, 返回一个可等待对象.
+
+    - `asyncio.as_completed(aws)`: 并发运行aws, 返回协程迭代器
+
+        - ```python
+            for coro in asyncio.as_completed(aws):
+                ret = await coro
+            ```
+
+- 创建任务:
+
+    - `asyncio.create_task()`: 启动一个`Task`对象.
+
+- 超时等待: `aysncio.wait_for(aw, timeout)`:
+
+    - 等待`aw`可等待对象完成, 指定`timeout`秒数后超时.
+
+- 内省:
+
+    - `asyncio.current_task()`: 返回当前运行的`Task`实例.
+    - `asyncio.all_tasks()`: 返回事件循环中所有未完成的`Task`对象.
+
+#### 3.低层级 API
 
 ##### 1.事件循环
 
-> `asyncio`应用的核心. 一个进程中最多存在一个事件循环;
+> `asyncio`应用的核心. 一个进程最多存在一个事件循环;
 >
 > 事件循环本身是一个死循环, 直到抛出异常, 或者设置 stop 标志才会停止.
 
 - 当前进程的事件循环, 存储在`_running_loop`中, 事件循环启动时将自身(`self`)存储其中, 退出时清空;
 
   - 可以通过`get_running_loop(), get_event_loop(), set_event_loop(), new_event_loop()` 控制当前进程中的事件循环.
-
-- 关键属性:
-  - `._scheduled`: 被调度任务集, 最小堆, 方便取最小值;
-  - `._ready`: 双向链表, 已准备就绪, 可以被执行的任务, 当`._ready`非空时, `slector`超时时间会被设置为0, 被立刻调用.
+- 关键属性和方法:
+  - `._ready`: 需要执行的队列, 遍历执行. 
+  - `._scheduled`: 被调度的`TimerHandle`列表, 使用最小堆维护, 每次取出最小值, 如果到指定时间, 让如`._ready`中执行.
   - `._current_handle`: 当前执行任务.
-
-- 添加任务:
-  - `call_at(), call_later()`: 在某个时刻或者延时指定时间调用, 实例化一个`TimerHandle`, 放入调度堆中.
-  - `call_son()`: 立刻调度, 实例化一个`Handle`, 放入`.ready`中.
-
-- 整体流程:
-  - 1.使用`select`, 将延时调度任务的最小时间作为超时时间
-  - 2.如果超时或`select`中时间被触发, 遍历`_scheduled`, 将可执行任务加入`_ready`;
-  - 3.遍历`_ready`, 执行.
-
 - `Handle`: 被调度的基本单位
   - 包含上下文, 回调, 参数, 时间循环等信息.
   - `_cancelled`: 取消执行的标记;
   - `_run()`: 在指定的上下环境中, 执行回调.
 
-##### 2.Futures
-
-> 用来链接底层回调式代码 和高层异步/等待式代码. **代表一个异步运算的最终结果, 线程不安全**
-
-- 相关函数:
-
-  - `isfuture(obj)`: `Future`实例, `Task`实例, `._asyncio_future_blocking`属性的对象.
-
-- `Future`对象属性和方法:
-  - 状态: `PENDING, CANCELLED, FINISHED`;
-  - `.result()`: 返回结果, 状态必须为`FINISHED`;
-  - `.set_result()`: 状态更新为`FINISHED`, 设置返回结果, 调用回调函数;
-  - `.done()`: future 是否完成, (状态为`FINISHED, CANCELLED`);
-  - `.add_done_callback()`: 设置完成回调;
-  - `._asyncio_future_blocking`
-    - `await`表达式中: `Future`未完成, 置为`True`, 并`yield self`;
-    - 在任务的`.__step()`中, 根据`_asyncio_future_blocking`判定执行流程.
-
-##### 3.事件循环策略
+##### 2.事件循环策略
 
 > 策略是进程的全局对象, 管理事件循环, 决定事件循环的类型, 控制事件循环的产生.
 
@@ -302,89 +372,6 @@ RESULT = _r
   - 进程监视器允许定制事件循环如何监视 Unix 子进程(就是知道子进程何时退出).
   - `ThreadedChildWatcher`: 为每一个子进程启动一个新的等待线程. 效率高, 但是占用而外内存.
   - `MultiLoopChildWatcher`: 注册`SIGCHLD`信号处理.
-
-#### 2.协程和任务
-
-##### 1.协程
-
-- 协程函数定义:`async def func()...`
-- 协程函数内部,能够使用`await, async for, aysnc with`等协程语法.
-- 调用协程函数返回一个协程对象`<coroutine object>`;
-- 协程的执行:
-  - `asyncio.run(coro_fun())`
-  - `await coro_fun()`;
-  - `asyncio.create_task()`: 用于并发运行多个协程, (调用当前进程的事件循环的`create_task`方法)
-
-#### 2.可等待对象
-
-> 可以在`await`语句中使用, 就是可等待对象. 主要有: 协程对象, Task, Future
-
-#### 3.Task
-
-> 用于并发的执行协程. 协程通过`asyncio.create_task()`被打包为一个*任务*, 该协程自动排入日程, 并准备立即执行.
->
-> 事件循环使用协同日程调度, 一个事件循环每次运行一个 Task 对象, 而一个 Task 对象会等待一个 Future 对象完成. 该时间循环会运行其他 Task, 回调或 IO 操作.
-
-- 通过`asyncio.create_task()`将一个协程对象打包为一个任务, 返回一个`Task`对象, 该协程将自动排入日程准备立即运行;
-
-- 全局对象
-
-  - `_all_tasks`: 所有 task 集合;
-  - `_current_tasks`: 每个`loop`对应的正在执行的 task.
-
-- `Task`对象:
-
-  > A coroutine wrapped in a Future.
-  >
-  > 继承于 Future
-
-  - 关键属性方法:
-    - `._fut_waiter`: 用于存放协程执行的返回.
-    - `._step()`: 通过`coro.send(None)`, 驱动协程执行.
-    - `._wakeup()`:
-
-  - 实例化时, 将`.__setp()`放入事件循环的`._ready`中(立刻调用).
-
-#### 4.并发运行任务
-
-- `asyncio.gather(*aws)`: 并发运行`aws`序列中的可等待对象;
-- `asyncio.wait_for(aw, timeout)`: 超时等待.
-- `asyncio.as_completed(aws)`: 并发执行可等待对象, 返回一个`Future`对象的迭代器.
-
-  - `asyncio.run(async_function(xx))`: 运行传入的协程对象;
-
-    - 底层通过获取事件循环, 调用`loop.run_until_complete()`执行;
-
-  - `await async_function()`: 等待一个协程执行;
-
-  - `await task`: 等待一个任务执行;
-
-  - **并发执行**: `asyncio.gather(*aws, loop=None, return_exceptions=False)`:
-
-    - `aws`: 可等待对象;
-
-    - ```python
-        async def test(name, number):
-            await asyncio.sleep(number)
-            print('Task %s ok!' % name)
-
-        async def main():
-            await asyncio.gater(
-              test('A', 4),
-                test('B', 3),
-                test('C', 2),
-                test('D', 1),
-            )
-      ```
-
-- **超时等待**
-
-  - `asyncio.wait_for(aw, timeout)`: 返回一个可等待对象, 指定时间后超时;
-  - `asyncio.wait(aws, timeout, return)`: 返回协程, 并发等待, 可以设置超时和返回条件;
-
-#### 5.运行asyncio程序
-
-- `asycio.run(coro, *)`
 
 ### 4.协程框架使用
 
@@ -399,9 +386,21 @@ RESULT = _r
           print(await response.text())
   ```
 
-## 4.concurrent.futures
+## 4.多种并发形式的适用场景
+
+- 多线程:  适用于`I/O bound`, 但是`I/O`本身的操作很快, 只需要有限数量的线程的场景.
+- 多进程: 适用`CPU bound`的场景.
+- 协程: 适用于`I/O bound`, 且`I/O`操作很慢, 需要很多任务处理的场景.
+    - 调度开销很少.
+    - 运行时不会被打断, 调度都是发生在执行完成, `await`等场景, 正常执行不存在资源竞争, 不用担心线程安全问题.
+    - 生态和相关的支持`asyncio`的包有限. 编码相对复杂一些.
+
+## 5.concurrent.futures
 
 > 启动并行任务, 异步执行可以由`ThreadPoolExecutor`或`ProcessPoolExecutor`来实现
+
+- `concurrent.futures.ThreadPoolExecutor(max_worr=x)`: 
+- `concurrent.futures.ProcessPoolExecutor(max_workers=x)`: 
 
 ## 扩展: yield 的实现原理
 

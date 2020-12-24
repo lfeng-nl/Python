@@ -42,6 +42,11 @@ x, y = p0
 
 ### 3.deque 双端队列
 
+- 线程安全, 相对于`list`, 优化了定长操作和`pop, insert`的开销.
+- 扩展:
+    - `queue`: 实现了多生产者, 多消费者队列, 适用于消息再多线程间安全交换. 可以使用阻塞.
+    - `multiprocessing.Queue`: 一个使用管道(或者是`socket`)和少量锁和信号量实现的共享队列, 可以用于多进程间的通信. 类似`queue`.
+
 ### 4.ChainMap
 
 > 将多个可迭代对象整合到一起形成一个新的可迭代对象, 重复的项或 key 仅保留首个;
@@ -130,10 +135,10 @@ x, y = p0
 
 - `functools.partial(func, *args, **kwargs)`: 偏函数, 基于 func 生成新函数, 固定某些参数, 从而生成一个新的函数;
 
-## 7.SQLAlchemy
+## 7.bisect
 
-## 8.Pillow
+> 适用于单调递增数列.
 
-## 9.Celery
+- `bisect.bisect_left(q, x)`: 返回插入位置, 使得左侧均`< x`, 右侧`>=x`
 
-## 10.inspect
+- `bisect.bisect(q, x), 等同于 bisect.bisect_right(q, x)`: 返回插入位置, 使得左侧均`<=x`, 右侧`>x`

@@ -94,6 +94,13 @@ def clip(text:str, max_len:'int > 0'=80) -> str:
 - `zip(iter1, [, iter2])`: 接收多个序列并将它们的元素组合成元组;
 - `reduce()`: 把一个函数作用在一个序列上, 这个函数必须接收两个参数, `reduce`把结果继续和序列的下一个元素做累积计算,
 - `sorted(iterable, key, )`, 可以根据 key 指定的 function 排序，如`sorted(a, key=abs)`
+    - `key`:
+        - 自定义函数, 接收元素, 返回参与排序的值.
+        - `operator.itemgetter(x)`: 通过`[]`取每个排序元素的指定`item`比较. 
+        - `operator.attrgetter('xxx')`: 使用每个排序元素的指定属性进行排序. 
+        - `operator.methodcaller('xxx')`: 使用每个排序元素的指定方法进行排序.
+    - 旧式的排序:
+        - `functolls.cmp_to_key`:  `key=cmp_to_key(lambda x, y: return x < y)`
 
 ### 2.匿名函数（lambda 表达式）
 

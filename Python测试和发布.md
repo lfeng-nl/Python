@@ -64,8 +64,27 @@
 
     if **name** == '**main**': # main 使用 TextTestRunner 运行所有测试用例
       unittest.main()
-    ```
+  ```
 
 ## 2.pdb
+
+- 启动pdb调试:
+
+    - 代码中加入以下内容
+
+    - ```python
+        import pdb
+        
+        pdb.set_trace()
+        ```
+
+    - 当程序执行到`pdb.set_trace()`时, 会暂停, 等待用户输入.
+
+- `pdb`命令简介 [参考](https://docs.python.org/zh-cn/3/library/pdb.html):
+
+    - w: 打印堆栈回溯.
+    - p expression: 在当前栈运行语句并打印.
+    - n: 继续运行到当前函数的下一行.
+    - r: 继续运行到函数返回.
 
 ## 3.打包发布
